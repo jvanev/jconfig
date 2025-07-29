@@ -57,6 +57,15 @@ internal fun Class<*>.toPrimitiveArray(value: String): Any {
         FloatArray::class.java -> FloatArray(array.size) { array[it].toFloat() }
         DoubleArray::class.java -> DoubleArray(array.size) { array[it].toDouble() }
         BooleanArray::class.java -> BooleanArray(array.size) { array[it].toBoolean() }
+        CharArray::class.java -> CharArray(array.size) {
+            val char = array[it]
+
+            if (char.length != 1) {
+                throw IllegalArgumentException("Cannot convert '$char' to char. Expected single character.")
+            }
+
+            array[it][0]
+        }
 
         else -> throw UnsupportedTypeConversionException(this, value)
     }
