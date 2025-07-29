@@ -19,6 +19,7 @@ import com.jvanev.kconfig.annotation.ConfigFile
 import com.jvanev.kconfig.annotation.ConfigGroup
 import com.jvanev.kconfig.annotation.ConfigProperty
 import com.jvanev.kconfig.annotation.DependsOn
+import com.jvanev.kconfig.converter.ValueConverter
 import java.lang.reflect.Type
 import java.nio.file.Path
 import kotlin.reflect.KClass
@@ -50,6 +51,8 @@ import kotlin.reflect.KClass
 class ConfigFactory(configDir: String) {
     private val configDir = Path.of(configDir)
 
+    private val valueConverter = ValueConverter()
+
     /**
      * Registers a custom value [converter] for [String] to [type] conversions not natively
      * supported by the factory's default mechanism, or to override existing default conversions.
@@ -64,7 +67,7 @@ class ConfigFactory(configDir: String) {
      * The function must return the successfully converted value; returning `null` is not allowed.
      */
     fun addValueConverter(type: Class<*>, converter: (String, Type) -> Any) {
-        TODO("Not implemented yet")
+        valueConverter.addValueConverter(type, converter)
     }
 
     /**
