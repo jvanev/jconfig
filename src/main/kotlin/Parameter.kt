@@ -24,11 +24,6 @@ import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.hasAnnotation
 
 /**
- * Returns the [ConfigProperty] annotation of this parameter, or `null` if it is not present.
- */
-internal fun KParameter.getConfigProperty() = findAnnotation<ConfigProperty>()
-
-/**
  * Returns the [ConfigProperty] annotation of this parameter.
  *
  * @param container The [KClass] type in which this parameter is declared.
@@ -45,11 +40,6 @@ internal fun KParameter.requireConfigProperty(container: KClass<*>) = requireNot
  * Determines whether this parameter is annotated with [ConfigGroup].
  */
 internal val KParameter.isGroup get() = hasAnnotation<ConfigGroup>()
-
-/**
- * Returns the [ConfigGroup] annotation of this parameter, or `null` if it is not present.
- */
-internal fun KParameter.getConfigGroup() = findAnnotation<ConfigGroup>()
 
 /**
  * Returns the [ConfigGroup] annotation of this parameter.
