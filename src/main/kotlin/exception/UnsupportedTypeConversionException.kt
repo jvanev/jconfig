@@ -24,7 +24,10 @@ import java.lang.reflect.Type
  * This typically occurs when a type lacks a default conversion rule and no custom
  * converter has been registered for it.
  */
-class UnsupportedTypeConversionException(message: String) : RuntimeException(message) {
+class UnsupportedTypeConversionException(
+    message: String,
+    throwable: Throwable? = null,
+) : RuntimeException(message, throwable) {
     constructor(type: Type, value: String? = null) : this(
         if (value == null) {
             "Conversions to type ${type.typeName} are not supported. " +

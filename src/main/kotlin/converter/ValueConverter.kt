@@ -16,6 +16,7 @@
 package com.jvanev.kconfig.converter
 
 import com.jvanev.kconfig.exception.UnsupportedTypeConversionException
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -40,6 +41,8 @@ import java.lang.reflect.Type
  * - **Maps:** [Map]. Both keys and values within the map are converted recursively based on their
  * generic type arguments
  * (e.g., `Map<String, Int>` will convert "key1=1,key2=2" into a map with string keys and integer values).
+ *
+ * > **Note:** The default implementation returns an [ArrayList] for [Collection] and [List], and a [HashSet] for [Set].
  *
  * ### Custom Converters and Overriding Behavior:
  * Additional type conversion support can be seamlessly integrated using the [addValueConverter] method.
@@ -120,6 +123,18 @@ internal class ValueConverter {
                     }
                 } catch (_: NoSuchMethodException) {
                     // Continue to the custom converters
+                } catch (e: InvocationTargetException) {
+                    val originalCause = e.targetException
+
+                    throw UnsupportedTypeConversionException(
+                        "An error occurred while converting '$value' to ${rawType.simpleName} using valueOf method: " +
+                        originalCause.message,
+                        originalCause
+                    )
+                } catch (e: Exception) {
+                    throw UnsupportedTypeConversionException(
+                        "Unexpected error occurred while converting '$value' to ${rawType.simpleName}: ${e.message}", e
+                    )
                 }
 
                 if (result == null) {
