@@ -1,0 +1,39 @@
+.gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+### IntelliJ IDEA ###
+.idea/
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### Kotlin ###
+.kotlin/
+
+### Eclipse ###
+.apt_generated/
+.settings/
+.sts4-cache/
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+.classpath
+.factorypath
+.project
+.springBeans
+
+### NetBeans ###
+.nb-gradle/
+dist/
+nbbuild/
+nbdist/
+nbproject/private/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
