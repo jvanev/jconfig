@@ -126,6 +126,8 @@ internal class ValueConverter {
                     for ((key, converter) in valueConverters.entries.toList()) {
                         if (key.isAssignableFrom(rawType)) {
                             result = converter(value, rawType)
+
+                            break
                         }
                     }
                 }
