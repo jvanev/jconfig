@@ -106,10 +106,8 @@ class ConfigFactory(configDir: String) {
         for (parameter in constructor.parameters) {
             val parameterType = parameter.type.jvmErasure
             val annotation = requireNotNull(parameterType.findAnnotation<ConfigFile>()) {
-                throw IllegalArgumentException(
-                    "Type ${parameterType.simpleName} declared on parameter " +
-                    "${type.simpleName}.${parameter.name} is not annotated with @ConfigFile"
-                )
+                "Type ${parameterType.simpleName} declared on parameter " +
+                "${type.simpleName}.${parameter.name} is not annotated with @ConfigFile"
             }
 
             if (processedConfigurations.containsKey(annotation.name)) {
