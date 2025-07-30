@@ -121,7 +121,15 @@ class ConfigFactory(configDir: String) {
             }
 
             processedConfigurations[annotation.name] = parameter.name ?: ""
-            arguments[parameter] = createConfig(parameterType)
+            arguments[parameter] = try {
+                createConfig(parameterType)
+            } catch (e: Exception) {
+                System.err.println(
+                    "Failed to initialize configuration container property ${type.simpleName}.${parameter.name}"
+                )
+
+                throw e
+            }
         }
 
         return constructor.callBy(arguments)
@@ -147,7 +155,13 @@ class ConfigFactory(configDir: String) {
         val properties = getProperties(container.name)
         val namespace = Namespace(type, properties)
 
-        return buildConfigTree(type, namespace)
+        return try {
+            buildConfigTree(type, namespace)
+        } catch (e: Exception) {
+            System.err.println("Failed to create an instance of configuration type ${type.simpleName}")
+
+            throw e
+        }
     }
 
     /**
@@ -202,7 +216,15 @@ class ConfigFactory(configDir: String) {
                 }
                 val type = parameter.type.javaType
                 processedKeys[configProperty.name] = parameter.name ?: ""
-                arguments[parameter] = valueConverter.convert(resolvedValue.trim(), type)
+                arguments[parameter] = try {
+                    valueConverter.convert(resolvedValue.trim(), type)
+                } catch (e: Exception) {
+                    System.err.println(
+                        "Failed to initialize configuration property ${container.simpleName}.${parameter.name}"
+                    )
+
+                    throw e
+                }
             }
         }
 
