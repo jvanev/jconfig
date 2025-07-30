@@ -118,7 +118,7 @@ class ValueConverterTest {
         val size: Int get() = items.size
 
         fun push(item: T) {
-            items.addLast(item)
+            items.add(item)
         }
 
         fun pop(): T {

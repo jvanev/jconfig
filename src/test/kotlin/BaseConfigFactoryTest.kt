@@ -42,19 +42,19 @@ class BaseConfigFactoryTest {
         val booleanProperty: Boolean,
 
         @ConfigProperty(name = "MissingProperty", defaultValue = "0xFF")
-        val integerProperty: Int = 0xFF,
+        val integerProperty: Int,
     )
 
     @Test
     fun existingProperties_ShouldReadFromPropertiesFile() {
-        val config = factory.createConfig(BaseConfiguration::class)
+        val config = factory.createConfig(BaseConfiguration::class.java)
 
         assertTrue(config.booleanProperty)
     }
 
     @Test
     fun missingPropertiesWithDefaultValue_ShouldReadDefaultValue() {
-        val config = factory.createConfig(BaseConfiguration::class)
+        val config = factory.createConfig(BaseConfiguration::class.java)
 
         assertEquals(0xFF, config.integerProperty)
     }
@@ -68,23 +68,23 @@ class BaseConfigFactoryTest {
     @Test
     fun missingPropertiesWithNoDefaultValue_ShouldThrow() {
         assertThrows<IllegalArgumentException> {
-            factory.createConfig(InvalidBaseConfiguration::class)
+            factory.createConfig(InvalidBaseConfiguration::class.java)
         }
     }
 
     @ConfigFile("BaseTestConfiguration.properties")
     data class MultipleDeclarationsOfTheSameKeyName(
         @ConfigProperty("BooleanProperty")
-        val booleanProperty: Boolean = false,
+        val booleanProperty: Boolean,
 
         @ConfigProperty("BooleanProperty")
-        val booleanProperty2: Boolean = false,
+        val booleanProperty2: Boolean,
     )
 
     @Test
     fun multipleDeclarationsOfSameKeyName_ShouldThrow() {
         assertThrows<IllegalArgumentException> {
-            factory.createConfig(MultipleDeclarationsOfTheSameKeyName::class)
+            factory.createConfig(MultipleDeclarationsOfTheSameKeyName::class.java)
         }
     }
 
@@ -96,19 +96,19 @@ class BaseConfigFactoryTest {
     @Test
     fun missingConfigPropertyAnnotation_ShouldThrow() {
         assertThrows<IllegalArgumentException> {
-            factory.createConfig(MissingConfigurationParameterAnnotation::class)
+            factory.createConfig(MissingConfigurationParameterAnnotation::class.java)
         }
     }
 
     data class MissingConfigFileAnnotation(
         @ConfigProperty("BooleanProperty")
-        val booleanProperty: Boolean = false,
+        val booleanProperty: Boolean,
     )
 
     @Test
     fun missingConfigFileAnnotation_ShouldThrow() {
         assertThrows<IllegalArgumentException> {
-            factory.createConfig(MissingConfigFileAnnotation::class)
+            factory.createConfig(MissingConfigFileAnnotation::class.java)
         }
     }
 }

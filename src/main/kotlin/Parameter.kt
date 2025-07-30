@@ -18,61 +18,61 @@ package com.jvanev.kconfig
 import com.jvanev.kconfig.annotation.ConfigGroup
 import com.jvanev.kconfig.annotation.ConfigProperty
 import com.jvanev.kconfig.annotation.DependsOn
-import kotlin.reflect.KClass
-import kotlin.reflect.KParameter
-import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.hasAnnotation
+import java.lang.reflect.Parameter
 
 /**
  * Returns the [ConfigProperty] annotation of this parameter.
  *
- * @param container The [KClass] type in which this parameter is declared.
+ * @param container The [Class] type in which this parameter is declared.
  *
  * @return The [ConfigProperty] annotation found on this parameter.
  *
  * @throws IllegalArgumentException If this parameter is not annotated with [ConfigProperty].
  */
-internal fun KParameter.requireConfigProperty(container: KClass<*>) = requireNotNull(findAnnotation<ConfigProperty>()) {
-    "Parameter '${this.name}' in '${container.simpleName}' is not annotated with @ConfigProperty."
-}
+internal fun Parameter.requireConfigProperty(container: Class<*>) =
+    requireNotNull(getDeclaredAnnotation(ConfigProperty::class.java)) {
+        "Parameter '${this.name}' in '${container.simpleName}' is not annotated with @ConfigProperty."
+    }
 
 /**
  * Determines whether this parameter is annotated with [ConfigGroup].
  */
-internal val KParameter.isGroup get() = hasAnnotation<ConfigGroup>()
+internal val Parameter.isGroup get() = isAnnotationPresent(ConfigGroup::class.java)
 
 /**
  * Returns the [ConfigGroup] annotation of this parameter.
  *
- * @param container The [KClass] type in which this parameter is declared.
+ * @param container The [Class] type in which this parameter is declared.
  *
  * @return The [ConfigGroup] annotation found on this parameter.
  *
  * @throws IllegalArgumentException If this parameter is not annotated with [ConfigGroup].
  */
-internal fun KParameter.requireConfigGroup(container: KClass<*>) = requireNotNull(findAnnotation<ConfigGroup>()) {
-    "Parameter '${this.name}' in '${container.simpleName}' is not annotated with @ConfigGroup."
-}
+internal fun Parameter.requireConfigGroup(container: Class<*>) =
+    requireNotNull(getDeclaredAnnotation(ConfigGroup::class.java)) {
+        "Parameter '${this.name}' in '${container.simpleName}' is not annotated with @ConfigGroup."
+    }
 
 /**
  * Determines whether this parameter is annotated with [DependsOn].
  */
-internal val KParameter.hasDependency get() = hasAnnotation<DependsOn>()
+internal val Parameter.hasDependency get() = isAnnotationPresent(DependsOn::class.java)
 
 /**
  * Returns the [DependsOn] annotation of this parameter, or `null` if it is not present.
  */
-internal fun KParameter.getDependsOn() = findAnnotation<DependsOn>()
+internal fun Parameter.getDependsOn() = getDeclaredAnnotation(DependsOn::class.java)
 
 /**
  * Returns the [DependsOn] annotation of this parameter.
  *
- * @param container The [KClass] type in which this parameter is declared.
+ * @param container The [Class] type in which this parameter is declared.
  *
  * @return The [DependsOn] annotation found on this parameter.
  *
  * @throws IllegalArgumentException If this parameter is not annotated with [DependsOn].
  */
-internal fun KParameter.requireDependsOn(container: KClass<*>) = requireNotNull(findAnnotation<DependsOn>()) {
-    "Parameter '${this.name}' in '${container.simpleName}' is not annotated with @DependsOn."
-}
+internal fun Parameter.requireDependsOn(container: Class<*>) =
+    requireNotNull(getDeclaredAnnotation(DependsOn::class.java)) {
+        "Parameter '${this.name}' in '${container.simpleName}' is not annotated with @DependsOn."
+    }

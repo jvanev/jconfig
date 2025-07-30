@@ -19,15 +19,14 @@ import com.jvanev.kconfig.annotation.ConfigFile
 import com.jvanev.kconfig.annotation.ConfigGroup
 import com.jvanev.kconfig.annotation.ConfigProperty
 import com.jvanev.kconfig.annotation.DependsOn
+import java.lang.reflect.Parameter
 import java.util.Properties
-import kotlin.reflect.KClass
-import kotlin.reflect.KParameter
 
 /**
  * Represents the current resolution context (scope) within the configuration build tree.
  * It encapsulates the relevant configuration data and state for a specific level of the hierarchy.
  *
- * @property container The [KClass] of the primary configuration type (the top-level class annotated with [ConfigFile])
+ * @property container The [Class] of the primary configuration type (the top-level class annotated with [ConfigFile])
  * that defines the base `.properties` file for this entire tree.
  * @property properties The [Properties] object containing the raw key-value pairs loaded from the
  * top-level configuration file associated with `container`.
@@ -40,7 +39,7 @@ import kotlin.reflect.KParameter
  * within this namespace will typically resolve to their [ConfigProperty.defaultValue].
  */
 internal data class Namespace(
-    val container: KClass<*>,
+    val container: Class<*>,
     val properties: Properties,
     val namespace: String = "",
     val isDependent: Boolean = false,
@@ -50,13 +49,13 @@ internal data class Namespace(
      * Creates a new [Namespace] instance that represents a nested configuration group,
      * inheriting properties and updating the namespace prefix and dependency state.
      *
-     * @param group The [KParameter] representing the [ConfigGroup] that defines this nested namespace.
+     * @param group The [Parameter] representing the [ConfigGroup] that defines this nested namespace.
      * @param groupDependencySatisfied A [Boolean] indicating whether the [DependsOn] condition
      * specifically for this `group` parameter is met.
      *
      * @return A new [Namespace] instance for the nested group.
      */
-    fun fromGroup(group: KParameter, groupDependencySatisfied: Boolean): Namespace {
+    fun fromGroup(group: Parameter, groupDependencySatisfied: Boolean): Namespace {
         val configGroup = group.requireConfigGroup(container)
 
         return Namespace(

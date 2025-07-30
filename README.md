@@ -1,7 +1,15 @@
 # KConfig
 
-A lightweight declarative configuration factory providing type-safety, effortless conditional
+A lightweight, declarative configuration factory for Java and Kotlin. Provides type-safety, effortless conditional
 value resolution, grouping, namespaces, and a flexible value conversion mechanism.
+
+---
+
+## Requirements
+
+Built with Kotlin 2.2.0, requires Java 17 or newer.
+
+Usage in Java projects requires `kotlin-stdlib 2.2.0`
 
 ---
 
@@ -62,7 +70,7 @@ data class DatabaseConfig(
 ```kotlin
 fun main() {
     val factory = ConfigFactory("../configDirPath")
-    val dbConfig = factory.createConfig(DatabaseConfig::class)
+    val dbConfig = factory.createConfig(DatabaseConfig::class.java)
 
     println(dbConfig)
 }
@@ -138,7 +146,7 @@ fun main() {
             DateTimeFormatter.ofPattern(value)
         }
     }
-    val systemConfig = factory.createConfig(SystemConfig::class)
+    val systemConfig = factory.createConfig(SystemConfig::class.java)
 
     println(LocalDateTime.now().format(systemConfig.logTimestampFormatter))
 }
@@ -180,7 +188,7 @@ fun main() {
             value.toLong() * 1000
         }
     }
-    val systemConfig = factory.createConfig(SystemConfig::class)
+    val systemConfig = factory.createConfig(SystemConfig::class.java)
 
     println(systemConfig.retryDelay)
 }
@@ -232,7 +240,7 @@ data class DeveloperConfig(
 ```kotlin
 fun main() {
     val factory = ConfigFactory("../configDirPath")
-    val developerConfig = factory.createConfig(DeveloperConfig::class)
+    val developerConfig = factory.createConfig(DeveloperConfig::class.java)
 
     println(developerConfig)
 }
@@ -306,7 +314,7 @@ data class DependentConfig(
 ```kotlin
 fun main() {
     val factory = ConfigFactory("../configDirPath")
-    val developerConfig = factory.createConfig(DeveloperConfig::class)
+    val developerConfig = factory.createConfig(DeveloperConfig::class.java)
 
     println(developerConfig)
 }
@@ -381,7 +389,7 @@ data class ServerConfig(
 ```kotlin
 fun main() {
     val factory = ConfigFactory("../configDirPath")
-    val networkConfig = factory.createConfig(NetworkConfig::class)
+    val networkConfig = factory.createConfig(NetworkConfig::class.java)
 
     println(networkConfig)
 }
@@ -429,7 +437,7 @@ data class ConfigContainer(
 ```kotlin
 fun main() {
     val factory = ConfigFactory("../configDirPath")
-    val container = factory.createConfigContainer(ConfigContainer::class)
+    val container = factory.createConfigContainer(ConfigContainer::class.java)
 
     println(container)
 }
@@ -442,6 +450,102 @@ fun main() {
 > `ConfigFactory.createConfig`.
 
 ---
+
+## Java Compatibility
+
+KConfig is 100% compatible with Java - replace Kotlin's data classes with Java records, and you're ready to roll.
+
+### Example
+
+The following example is a compact version of all examples above.
+
+```java
+public class Example {
+    public record ConfigContainer(
+        DatabaseConfig database,
+        NetworkConfig network,
+        SystemConfig system,
+        DeveloperConfig developerConfig
+    ) {
+        @ConfigFile(name = "Database.properties")
+        public record DatabaseConfig(
+            @ConfigProperty(name = "URL") String url,
+            @ConfigProperty(name = "User") String user,
+            @ConfigProperty(name = "Password") String password,
+            @ConfigProperty(name = "PoolSize") int poolSize,
+
+            // When no such key exists in the properties file, a defaultValue is required
+            @ConfigProperty(name = "NonExistent", defaultValue = "False") boolean nonExistent
+        ) {
+        }
+
+        @ConfigFile(name = "System.properties")
+        public record SystemConfig(
+            @ConfigProperty(name = "LogTimestampFormat") DateTimeFormatter logTimestampFormat,
+            @ConfigProperty(name = "RetryDelay") long retryDelay
+        ) {
+        }
+
+        @ConfigFile(name = "Network.properties")
+        public record NetworkConfig(
+            @ConfigGroup(namespace = "LoginServer") ServerConfig login,
+            @ConfigGroup(namespace = "GameServer") ServerConfig game
+        ) {
+            public record ServerConfig(
+                @ConfigProperty(name = "Host") String host,
+                @ConfigProperty(name = "Port") int port,
+                @ConfigProperty(name = "AcceptorThreads") int acceptorThreads,
+                @ConfigProperty(name = "WorkerThreads") int workerThreads,
+                @ConfigProperty(name = "WaterMarkLow") int watermarkLow,
+                @ConfigProperty(name = "WaterMarkHigh") int watermarkHigh
+            ) {
+            }
+        }
+
+        @ConfigFile(name = "Developer.properties")
+        public record DeveloperConfig(
+            @ConfigProperty(name = "DeveloperMode") boolean developerMode,
+
+            @ConfigGroup
+            @DependsOn(property = "DeveloperMode")
+            DependentConfig dependentConfig
+        ) {
+            public record DependentConfig(
+                @ConfigProperty(name = "LogLevel", defaultValue = "INFO") System.Logger.Level logLevel,
+                @ConfigProperty(name = "ShowDebugOverlay", defaultValue = "False") boolean debugOverlay,
+                @ConfigProperty(name = "BypassLogin", defaultValue = "False") boolean bypassLogin,
+                @ConfigProperty(name = "RateLimit", defaultValue = "127") int rateLimit
+            ) {
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        var factory = new ConfigFactory("../configDirPath");
+        factory.addValueConverter(
+            DateTimeFormatter.class,
+            (value, type, typeArgs) -> DateTimeFormatter.ofPattern(value)
+        );
+        factory.addValueConverter(long.class, (value, type, typeArgs) -> Long.parseLong(value) * 1000);
+
+        var database = factory.createConfig(ConfigContainer.DatabaseConfig.class);
+        System.out.println(database);
+
+        var systemConfig = factory.createConfig(ConfigContainer.SystemConfig.class);
+        System.out.println(LocalDateTime.now().format(systemConfig.logTimestampFormat));
+        System.out.println(systemConfig.retryDelay);
+
+        var developer =  factory.createConfig(ConfigContainer.DeveloperConfig.class);
+        System.out.println(developer);
+
+        var network = factory.createConfig(ConfigContainer.NetworkConfig.class);
+        System.out.println(network);
+
+        var container = factory.createConfigContainer(ConfigContainer.class);
+        System.out.println(container);
+    }
+}
+```
 
 ## License
 

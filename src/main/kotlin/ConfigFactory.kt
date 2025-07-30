@@ -27,12 +27,6 @@ import java.lang.reflect.Type
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
-import kotlin.reflect.KClass
-import kotlin.reflect.KParameter
-import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.primaryConstructor
-import kotlin.reflect.javaType
-import kotlin.reflect.jvm.jvmErasure
 
 /**
  * A type-safe configuration factory responsible for producing fully initialized configuration objects.
@@ -88,7 +82,7 @@ class ConfigFactory(configDir: String) {
      * within the container, loading their values from their respective configuration files.
      * Each property in the container's primary constructor must be of a type annotated with [ConfigFile].
      *
-     * @param type The [KClass] of the *Configuration Container* to create.
+     * @param type The [Class] of the *Configuration Container* to create.
      *
      * @return A fully initialized instance of the *Configuration Container*.
      *
@@ -97,16 +91,20 @@ class ConfigFactory(configDir: String) {
      * or if multiple properties within the container reference the same configuration file name.
      * @throws IOException If there's an issue loading a `.properties` file from `configDir`.
      */
-    fun <T : Any> createConfigContainer(type: KClass<T>): T {
-        val constructor = requireNotNull(type.primaryConstructor) {
-            "${type.simpleName} must declare a primary constructor"
+    fun <T : Any> createConfigContainer(type: Class<T>): T {
+        if (type.constructors.size != 1) {
+            throw IllegalArgumentException(
+                "Configuration container ${type.simpleName} must declare exactly one constructor"
+            )
         }
-        val arguments = mutableMapOf<KParameter, Any?>()
+
+        val constructor = type.constructors[0]
+        val arguments = arrayOfNulls<Any>(constructor.parameters.size)
         val processedConfigurations = mutableMapOf<String, String>()
 
-        for (parameter in constructor.parameters) {
-            val parameterType = parameter.type.jvmErasure
-            val annotation = requireNotNull(parameterType.findAnnotation<ConfigFile>()) {
+        for ((i, parameter) in constructor.parameters.withIndex()) {
+            val parameterType = parameter.type
+            val annotation = requireNotNull(parameter.type.getDeclaredAnnotation(ConfigFile::class.java)) {
                 "Type ${parameterType.simpleName} declared on parameter " +
                 "${type.simpleName}.${parameter.name} is not annotated with @ConfigFile"
             }
@@ -121,7 +119,7 @@ class ConfigFactory(configDir: String) {
             }
 
             processedConfigurations[annotation.name] = parameter.name ?: ""
-            arguments[parameter] = try {
+            arguments[i] = try {
                 createConfig(parameterType)
             } catch (e: Exception) {
                 System.err.println(
@@ -132,7 +130,8 @@ class ConfigFactory(configDir: String) {
             }
         }
 
-        return constructor.callBy(arguments)
+        @Suppress("UNCHECKED_CAST")
+        return constructor.newInstance(*arguments) as T
     }
 
     /**
@@ -141,15 +140,15 @@ class ConfigFactory(configDir: String) {
      * This method loads property values from the configuration file specified by the [ConfigFile]
      * annotation on the provided [type], applying default values and resolving dependencies as needed.
      *
-     * @param type The [KClass] of the *Configuration Type* to create.
+     * @param type The [Class] of the *Configuration Type* to create.
      *
      * @return A fully initialized instance of the *Configuration Type*.
      *
      * @throws IllegalArgumentException If the provided [type] is not a valid *Configuration Type*
      * (i.e., not annotated with [ConfigFile]).
      */
-    fun <T : Any> createConfig(type: KClass<T>): T {
-        val container = requireNotNull(type.findAnnotation<ConfigFile>()) {
+    fun <T : Any> createConfig(type: Class<T>): T {
+        val container = requireNotNull(type.getDeclaredAnnotation(ConfigFile::class.java)) {
             "Class ${type.simpleName} must be annotated with @ConfigFile"
         }
         val properties = getProperties(container.name)
@@ -166,7 +165,7 @@ class ConfigFactory(configDir: String) {
 
     /**
      * Recursively constructs and populates a configuration object tree based on the provided
-     * container [KClass] and its current [namespace] context.
+     * container [Class] and its current [namespace] context.
      *
      * This internal method iterates through the primary constructor parameters of the `container`:
      * - If a parameter is a [ConfigGroup], it creates a new [Namespace] for the group and
@@ -175,7 +174,7 @@ class ConfigFactory(configDir: String) {
      * value, applying dependency checks and default values, and then converts the string value
      * to the appropriate Kotlin type using [ValueConverter].
      *
-     * @param container The [KClass] of the configuration object (or group) currently being built.
+     * @param type The [Class] of the configuration object (or group) currently being built.
      * @param namespace The [Namespace] object defining the current scope, properties, and dependency state.
      *
      * @return A fully initialized instance of the `container` type.
@@ -185,27 +184,30 @@ class ConfigFactory(configDir: String) {
      * @throws UnsupportedTypeConversionException If a property's resolved string value cannot be
      * converted to its target Kotlin type.
      */
-    @OptIn(ExperimentalStdlibApi::class)
-    private fun <T : Any> buildConfigTree(container: KClass<T>, namespace: Namespace): T {
-        val constructor = requireNotNull(container.primaryConstructor) {
-            "${container.simpleName} must declare a primary constructor"
+    private fun <T : Any> buildConfigTree(type: Class<T>, namespace: Namespace): T {
+        if (type.constructors.size != 1) {
+            throw IllegalArgumentException(
+                "Configuration type ${type.simpleName} must declare exactly one constructor"
+            )
         }
-        val arguments = mutableMapOf<KParameter, Any?>()
-        val processedKeys = mutableMapOf<String, String>()
-        val valueResolver = ValueResolver(namespace.properties, container, namespace.namespace, constructor.parameters)
 
-        for (parameter in constructor.parameters) {
+        val constructor = type.constructors[0]
+        val arguments = arrayOfNulls<Any>(constructor.parameters.size)
+        val processedKeys = mutableMapOf<String, String>()
+        val valueResolver = ValueResolver(namespace.properties, type, namespace.namespace, constructor.parameters)
+
+        for ((i, parameter) in constructor.parameters.withIndex()) {
             if (parameter.isGroup) {
                 val groupScope = namespace.fromGroup(parameter, valueResolver.isGroupDependencySatisfied(parameter))
-                arguments[parameter] = buildConfigTree(parameter.type.jvmErasure, groupScope)
+                arguments[i] = buildConfigTree(parameter.type, groupScope)
             } else {
-                val configProperty = parameter.requireConfigProperty(container)
+                val configProperty = parameter.requireConfigProperty(type)
 
                 if (processedKeys.containsKey(configProperty.name)) {
                     throw IllegalArgumentException(
                         "Configuration property '${configProperty.name}' declared on parameter " +
-                        "${container.simpleName}.${parameter.name} is also declared on parameter " +
-                        "${container.simpleName}.${processedKeys[configProperty.name]}"
+                        "${type.simpleName}.${parameter.name} is also declared on parameter " +
+                        "${type.simpleName}.${processedKeys[configProperty.name]}"
                     )
                 }
 
@@ -214,13 +216,12 @@ class ConfigFactory(configDir: String) {
                 } else {
                     configProperty.defaultValue
                 }
-                val type = parameter.type.javaType
-                processedKeys[configProperty.name] = parameter.name ?: ""
-                arguments[parameter] = try {
-                    valueConverter.convert(resolvedValue.trim(), type)
+                processedKeys[configProperty.name] = parameter.name
+                arguments[i] = try {
+                    valueConverter.convert(resolvedValue.trim(), parameter.parameterizedType)
                 } catch (e: Exception) {
                     System.err.println(
-                        "Failed to initialize configuration property ${container.simpleName}.${parameter.name}"
+                        "Failed to initialize configuration property ${type.simpleName}.${parameter.name}"
                     )
 
                     throw e
@@ -228,7 +229,8 @@ class ConfigFactory(configDir: String) {
             }
         }
 
-        return constructor.callBy(arguments)
+        @Suppress("UNCHECKED_CAST")
+        return constructor.newInstance(*arguments) as T
     }
 
     /**

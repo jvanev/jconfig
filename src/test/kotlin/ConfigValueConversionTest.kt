@@ -103,7 +103,7 @@ class ConfigValueConversionTest {
     inner class CorrectlyFormattedPropertyTests {
         @Test
         fun shouldSupportPrimitives() {
-            val config = factory.createConfig(CorrectPrimitiveConfiguration::class)
+            val config = factory.createConfig(CorrectPrimitiveConfiguration::class.java)
 
             assertTrue(config.booleanTrueProperty)
             assertFalse(config.booleanFalseProperty)
@@ -119,7 +119,7 @@ class ConfigValueConversionTest {
 
         @Test
         fun shouldSupportBoxedPrimitivesAndOtherReferenceTypes() {
-            val config = factory.createConfig(CorrectReferenceConfiguration::class)
+            val config = factory.createConfig(CorrectReferenceConfiguration::class.java)
 
             assertEquals("This is a test", config.stringProperty)
             assertEquals(LogLevel.DEBUG, config.enumProperty)
@@ -151,7 +151,7 @@ class ConfigValueConversionTest {
     inner class IncorrectlyFormattedPropertyTests {
         @Test
         fun incorrectlyFormattedPropertyValuesShouldStillWork() {
-            val config = factory.createConfig(IncorrectPropertyConfiguration::class)
+            val config = factory.createConfig(IncorrectPropertyConfiguration::class.java)
 
             assertTrue(config.booleanTrueProperty)
             assertFalse(config.booleanFalseProperty)
@@ -172,7 +172,7 @@ class ConfigValueConversionTest {
         @Test
         fun shouldThrowOnUnsupportedReferenceType() {
             assertThrows<UnsupportedTypeConversionException> {
-                factory.createConfig(DateTimeFormatterConfigurationParameter::class)
+                factory.createConfig(DateTimeFormatterConfigurationParameter::class.java)
             }
         }
 
@@ -184,7 +184,7 @@ class ConfigValueConversionTest {
             }
 
             assertDoesNotThrow {
-                factory.createConfig(DateTimeFormatterConfigurationParameter::class)
+                factory.createConfig(DateTimeFormatterConfigurationParameter::class.java)
             }
         }
 
@@ -198,7 +198,7 @@ class ConfigValueConversionTest {
                 URI.create(value).toURL()
             }
 
-            val config = factory.createConfig(DateTimeFormatterConfigurationParameter::class)
+            val config = factory.createConfig(DateTimeFormatterConfigurationParameter::class.java)
             val dateTime = LocalDateTime.of(2025, 7, 5, 13, 17)
 
             assertEquals("05.07.2025 13:17", dateTime.format(config.formatter))
@@ -234,28 +234,28 @@ class ConfigValueConversionTest {
         @Test
         fun invalidStringToIntegerConversion_ShouldThrow() {
             assertThrows<IllegalArgumentException> {
-                factory.createConfig(InvalidIntegerConfiguration::class)
+                factory.createConfig(InvalidIntegerConfiguration::class.java)
             }
         }
 
         @Test
         fun invalidStringToCharacterConversion_ShouldThrow() {
             assertThrows<IllegalArgumentException> {
-                factory.createConfig(InvalidCharConfiguration::class)
+                factory.createConfig(InvalidCharConfiguration::class.java)
             }
         }
 
         @Test
         fun invalidEnumCasing_shouldThrow() {
             assertThrows<IllegalArgumentException> {
-                factory.createConfig(InvalidEnumCasingConfiguration::class)
+                factory.createConfig(InvalidEnumCasingConfiguration::class.java)
             }
         }
 
         @Test
         fun invalidStringToIntegerArrayConversion_ShouldThrow() {
             assertThrows<IllegalArgumentException> {
-                factory.createConfig(InvalidIntegerArrayConfiguration::class)
+                factory.createConfig(InvalidIntegerArrayConfiguration::class.java)
             }
         }
     }

@@ -136,13 +136,13 @@ class ConfigurationContainerFactoryTest {
     @Test
     fun correctlyConfiguredContainer_ShouldNotThrowOnInitialization() {
         assertDoesNotThrow {
-            factory.createConfigContainer(ConfigurationContainer::class)
+            factory.createConfigContainer(ConfigurationContainer::class.java)
         }
     }
 
     @Test
     fun correctlyConfiguredContainer_ShouldBeInitializedCorrectly() {
-        val container = factory.createConfigContainer(ConfigurationContainer::class)
+        val container = factory.createConfigContainer(ConfigurationContainer::class.java)
 
         assertTrue(container.baseConfiguration.booleanProperty)
         assertEquals(0xFF, container.baseConfiguration.integerProperty)
@@ -165,7 +165,7 @@ class ConfigurationContainerFactoryTest {
     @Test
     fun incorrectlyConfiguredContainer_ShouldThrow() {
         assertThrows<IllegalArgumentException> {
-            factory.createConfigContainer(UnannotatedTypeInConfigurationContainer::class)
+            factory.createConfigContainer(UnannotatedTypeInConfigurationContainer::class.java)
         }
     }
 
@@ -177,7 +177,7 @@ class ConfigurationContainerFactoryTest {
     @Test
     fun multipleTypesDeclaringTheSameFilename_ShouldThrow() {
         assertThrows<IllegalArgumentException> {
-            factory.createConfigContainer(DuplicateConfigFileNameDeclarationContainer::class)
+            factory.createConfigContainer(DuplicateConfigFileNameDeclarationContainer::class.java)
         }
     }
 }

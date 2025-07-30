@@ -22,9 +22,8 @@ import com.jvanev.kconfig.hasDependency
 import com.jvanev.kconfig.isGroup
 import com.jvanev.kconfig.requireConfigProperty
 import com.jvanev.kconfig.requireDependsOn
+import java.lang.reflect.Parameter
 import java.util.Properties
-import kotlin.reflect.KClass
-import kotlin.reflect.KParameter
 
 /**
  * A mechanism for resolving the runtime values of configuration properties scoped to a given namespace.
@@ -32,17 +31,17 @@ import kotlin.reflect.KParameter
  * including detection of circular dependencies.
  *
  * @param properties The [Properties] instance containing the raw configuration key-value pairs.
- * @param container The [KClass] representing the configuration type (or group) being resolved.
+ * @param container The [Class] representing the configuration type (or group) being resolved.
  * @param namespace The namespace (prefix) for the properties being resolved within this context.
  * An empty string indicates the root or default namespace.
- * @param parameters The list of [KParameter]s representing the properties declared in the
+ * @param parameters The list of [Parameter]s representing the properties declared in the
  * primary constructor of the [container] class.
  */
 internal class ValueResolver(
     private val properties: Properties,
-    private val container: KClass<*>,
+    private val container: Class<*>,
     private val namespace: String,
-    parameters: List<KParameter>,
+    parameters: Array<Parameter>,
 ) {
     /**
      * Internal map storing [ConfigParameter] instances, keyed by their [ConfigProperty.name].
@@ -76,14 +75,14 @@ internal class ValueResolver(
      * file will be loaded *only if* the dependency condition is satisfied (i.e., its resolved
      * value matches the [DependsOn.value]). Otherwise, [ConfigProperty.defaultValue] will be returned.
      *
-     * @param parameter The [KParameter] representing the configuration property to resolve.
+     * @param parameter The [Parameter] representing the configuration property to resolve.
      *
      * @return The resolved runtime [String] value for the parameter.
      *
      * @throws IllegalArgumentException If the parameter is not a valid configuration property
      * or if its dependencies are malformed.
      */
-    fun resolveValue(parameter: KParameter): String {
+    fun resolveValue(parameter: Parameter): String {
         val configParameter = parameter.asConfigParameter()
 
         return if (!configParameter.hasDependency || isDependencySatisfied(configParameter)) {
@@ -101,14 +100,14 @@ internal class ValueResolver(
      * - The resolved value of its declared dependency matches the [DependsOn.value].
      * The dependency chain for the dependent property is also evaluated.
      *
-     * @param parameter The [KParameter] representing the [ConfigGroup] to check.
+     * @param parameter The [Parameter] representing the [ConfigGroup] to check.
      *
      * @return `true` if the group's dependency condition is satisfied, `false` otherwise.
      *
      * @throws IllegalArgumentException If the group depends on a non-existent property
      * or if a circular dependency is detected in the chain.
      */
-    fun isGroupDependencySatisfied(parameter: KParameter): Boolean {
+    fun isGroupDependencySatisfied(parameter: Parameter): Boolean {
         if (!parameter.hasDependency) {
             return true
         }
@@ -196,12 +195,12 @@ internal class ValueResolver(
     }
 
     /**
-     * Converts a [KParameter] into its corresponding [ConfigParameter] representation.
+     * Converts a [Parameter] into its corresponding [ConfigParameter] representation.
      *
      * @throws IllegalArgumentException If the parameter is not a valid configuration property
      * (i.e., not found in the [configParameters] map, or missing [ConfigProperty] annotation).
      */
-    private fun KParameter.asConfigParameter(): ConfigParameter {
+    private fun Parameter.asConfigParameter(): ConfigParameter {
         val configProperty = requireConfigProperty(container)
 
         return requireNotNull(configParameters[configProperty.name]) {

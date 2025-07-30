@@ -79,7 +79,7 @@ class ConfigurationGroupTest {
     inner class TopLevelGroupTests {
         @Test
         fun enabledToplevelGroup_ShouldReadFromConfigFile() {
-            val config = factory.createConfig(TopLevelConfiguration::class)
+            val config = factory.createConfig(TopLevelConfiguration::class.java)
 
             assertEquals(LogLevel.DEBUG, config.enabledConfig.logLevel)
             assertEquals('D', config.enabledConfig.logTag)
@@ -89,7 +89,7 @@ class ConfigurationGroupTest {
 
         @Test
         fun disabledToplevelGroup_ShouldReadDefaultValues() {
-            val config = factory.createConfig(TopLevelConfiguration::class)
+            val config = factory.createConfig(TopLevelConfiguration::class.java)
 
             assertEquals(LogLevel.INFO, config.disabledConfig.logLevel)
             assertEquals('I', config.disabledConfig.logTag)
@@ -155,7 +155,7 @@ class ConfigurationGroupTest {
     inner class NamespacedGroupTests {
         @Test
         fun enabledNamespacedGroup_ShouldReadFromConfigFile() {
-            val config = factory.createConfig(NamespacedConfiguration::class)
+            val config = factory.createConfig(NamespacedConfiguration::class.java)
 
             assertFalse(config.devService.encryptPassword)
             assertTrue(config.devService.disableSecurity)
@@ -169,7 +169,7 @@ class ConfigurationGroupTest {
 
         @Test
         fun disabledNamespacedGroup_ShouldReadDefaultValues() {
-            val config = factory.createConfig(NamespacedConfiguration::class)
+            val config = factory.createConfig(NamespacedConfiguration::class.java)
 
             assertTrue(config.clientService.encryptPassword)
             assertFalse(config.clientService.disableSecurity)
@@ -202,7 +202,7 @@ class ConfigurationGroupTest {
         @Test
         fun missingDefaultValueInDependentGroup_ShouldThrow() {
             assertThrows<IllegalArgumentException> {
-                factory.createConfig(MissingDefaultValueOnDependentParameter::class)
+                factory.createConfig(MissingDefaultValueOnDependentParameter::class.java)
             }
         }
     }

@@ -152,21 +152,21 @@ class DependencyConfigurationTest {
     inner class ValidDependencyDeclarationTests {
         @Test
         fun dependentDeclarationWithSatisfiedDependency_ShouldReadFromFile() {
-            val config = factory.createConfig(BasicDependencyConfiguration::class)
+            val config = factory.createConfig(BasicDependencyConfiguration::class.java)
 
             assertEquals(65535, config.integerPropertyWithSatisfiedDependency)
         }
 
         @Test
         fun dependentDeclarationWithUnsatisfiedDependency_ShouldReadDefaultValue() {
-            val config = factory.createConfig(BasicDependencyConfiguration::class)
+            val config = factory.createConfig(BasicDependencyConfiguration::class.java)
 
             assertEquals(0, config.integerPropertyWithUnsatisfiedDependency)
         }
 
         @Test
         fun indirectSatisfiedDependencies_ShouldReadFromFile() {
-            val config = factory.createConfig(IndirectSatisfiedDependencyConfiguration::class)
+            val config = factory.createConfig(IndirectSatisfiedDependencyConfiguration::class.java)
 
             assertTrue(config.configC)
             assertTrue(config.configB)
@@ -175,7 +175,7 @@ class DependencyConfigurationTest {
 
         @Test
         fun indirectUnsatisfiedDependencies_ShouldReadDefaultValue() {
-            val config = factory.createConfig(IndirectUnsatisfiedDependencyConfiguration::class)
+            val config = factory.createConfig(IndirectUnsatisfiedDependencyConfiguration::class.java)
 
             assertFalse(config.configA)
             assertFalse(config.configB)
@@ -184,7 +184,7 @@ class DependencyConfigurationTest {
 
         @Test
         fun indirectMixedSatisfiedDependencies_ShouldReadFromAppropriateSource() {
-            val config = factory.createConfig(IndirectMixedSatisfiedDependencyConfiguration::class)
+            val config = factory.createConfig(IndirectMixedSatisfiedDependencyConfiguration::class.java)
 
             assertTrue(config.configB)
             assertTrue(config.configC)
@@ -195,7 +195,7 @@ class DependencyConfigurationTest {
 
         @Test
         fun dependencySatisfiedByDefaultValue_ShouldReadFromFile() {
-            val config = factory.createConfig(DefaultValueSatisfyingDependencyConfiguration::class)
+            val config = factory.createConfig(DefaultValueSatisfyingDependencyConfiguration::class.java)
 
             assertFalse(config.booleanFalseProperty)
             assertEquals(0, config.integerPropertyTwo)
@@ -204,7 +204,7 @@ class DependencyConfigurationTest {
 
         @Test
         fun twoKeysDependingOnTheSameSatisfiedDependency_ShouldReadFromFile() {
-            val config = factory.createConfig(TwoKeysDependingOnTheSameSatisfiedDependency::class)
+            val config = factory.createConfig(TwoKeysDependingOnTheSameSatisfiedDependency::class.java)
 
             assertEquals(65535, config.integerPropertyOne)
             assertEquals(65535, config.integerPropertyTwo)
@@ -212,7 +212,7 @@ class DependencyConfigurationTest {
 
         @Test
         fun twoKeysDependingOnTheSameUnsatisfiedDependency_ShouldReadDefaultValue() {
-            val config = factory.createConfig(TwoKeysDependingOnTheSameUnsatisfiedDependency::class)
+            val config = factory.createConfig(TwoKeysDependingOnTheSameUnsatisfiedDependency::class.java)
 
             assertEquals(0, config.integerPropertyOne)
             assertEquals(0, config.integerPropertyTwo)
@@ -252,21 +252,21 @@ class DependencyConfigurationTest {
         @Test
         fun dependencyWithNoDefaultValue_ShouldThrow() {
             assertThrows<IllegalArgumentException> {
-                factory.createConfig(DependencyWithNoDefaultValue::class)
+                factory.createConfig(DependencyWithNoDefaultValue::class.java)
             }
         }
 
         @Test
         fun dependingOnNonExistentParameter_ShouldThrow() {
             assertThrows<RuntimeException> {
-                factory.createConfig(DependingOnNonExistentConfiguration::class)
+                factory.createConfig(DependingOnNonExistentConfiguration::class.java)
             }
         }
 
         @Test
         fun circularDependencyGraph_ShouldThrow() {
             assertThrows<IllegalArgumentException> {
-                factory.createConfig(CircularDependencyGraph::class)
+                factory.createConfig(CircularDependencyGraph::class.java)
             }
         }
     }

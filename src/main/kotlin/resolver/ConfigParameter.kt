@@ -20,19 +20,18 @@ import com.jvanev.kconfig.annotation.DependsOn
 import com.jvanev.kconfig.getDependsOn
 import com.jvanev.kconfig.hasDependency
 import com.jvanev.kconfig.requireConfigProperty
-import kotlin.reflect.KClass
-import kotlin.reflect.KParameter
+import java.lang.reflect.Parameter
 
 /**
  * Represents a single configuration parameter, encapsulating its metadata for resolution.
  * This class serves as an internal data carrier for [ValueResolver].
  *
- * @param container The [KClass] of the configuration type (or group) where this parameter is declared.
- * @param parameter The [KParameter] representing the actual Kotlin property.
+ * @param container The [Class] of the configuration type (or group) where this parameter is declared.
+ * @param parameter The [Parameter] representing the actual Kotlin property.
  */
-internal class ConfigParameter(container: KClass<*>, parameter: KParameter) {
+internal class ConfigParameter(container: Class<*>, parameter: Parameter) {
     /**
-     * The fully qualified name of the [KParameter] this config parameter represents,
+     * The fully qualified name of the [Parameter] this config parameter represents,
      * including its parent container's simple name (e.g., "MyConfig.myProperty").
      */
     val parameterName = "${container.simpleName}.${parameter.name}"
