@@ -64,7 +64,7 @@ internal class ValueResolver(
      * Cache for already resolved string values, mapped by their fully qualified property name
      * (including namespace). This prevents redundant lookups in the [properties] object.
      */
-    val resolvedValues = mutableMapOf<String, String>()
+    private val resolvedValues = mutableMapOf<String, String>()
 
     /**
      * Resolves and returns the final runtime [String] value for the given configuration [parameter].
