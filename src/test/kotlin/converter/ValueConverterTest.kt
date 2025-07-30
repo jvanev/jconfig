@@ -15,7 +15,9 @@
  */
 package com.jvanev.kconfig.converter
 
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.LinkedList
 import kotlin.test.assertEquals
 
@@ -54,6 +56,54 @@ class ValueConverterTest {
         assertEquals(8.toShort(), converter.convert(short, Short::class.java))
         assertEquals(9, converter.convert(int, Int::class.java))
         assertEquals(10L, converter.convert(long, Long::class.java))
+    }
+
+    @Test
+    fun shouldConvertToPrimitiveArrays() {
+        val intValues = "1, 2, 0x03, #4"
+        val expectedIntArray = intArrayOf(1, 2, 3, 4)
+        assertArrayEquals(expectedIntArray, converter.convert(intValues, IntArray::class.java) as IntArray)
+
+        val booleanValues = "True, false, TRUE , FALSe"
+        val expectedBooleanArray = booleanArrayOf(true, false, true, false)
+        assertArrayEquals(
+            expectedBooleanArray,
+            converter.convert(booleanValues, BooleanArray::class.java) as BooleanArray
+        )
+
+        val charValues = "a, b, c,d"
+        val expectedCharArray = charArrayOf('a', 'b', 'c', 'd')
+        assertArrayEquals(expectedCharArray, converter.convert(charValues, CharArray::class.java) as CharArray)
+
+        val byteValues = "1, 2, 3"
+        val expectedByteArray = byteArrayOf(1, 2, 3)
+        assertArrayEquals(expectedByteArray, converter.convert(byteValues, ByteArray::class.java) as ByteArray)
+
+        val shortValues = "100, 200, 300"
+        val expectedShortArray = shortArrayOf(100, 200, 300)
+        assertArrayEquals(expectedShortArray, converter.convert(shortValues, ShortArray::class.java) as ShortArray)
+
+        val longValues = "10000000000, 20000000000"
+        val expectedLongArray = longArrayOf(10000000000L, 20000000000L)
+        assertArrayEquals(expectedLongArray, converter.convert(longValues, LongArray::class.java) as LongArray)
+
+        val floatValues = "1.1, 2.2, 3.3"
+        val expectedFloatArray = floatArrayOf(1.1f, 2.2f, 3.3f)
+        assertArrayEquals(expectedFloatArray, converter.convert(floatValues, FloatArray::class.java) as FloatArray)
+
+        val doubleValues = "1.1, 2.2, 3.3"
+        val expectedDoubleArray = doubleArrayOf(1.1, 2.2, 3.3)
+        assertArrayEquals(expectedDoubleArray, converter.convert(doubleValues, DoubleArray::class.java) as DoubleArray)
+    }
+
+    @Test
+    fun shouldThrowOnInvalidCharArrayElement() {
+        val charArrayType = CharArray::class.java
+        val invalidCharValues = "a, bc, d" // 'bc' is not a single character
+
+        assertThrows<IllegalArgumentException> {
+            converter.convert(invalidCharValues, charArrayType)
+        }
     }
 
     class ExampleType(
