@@ -176,7 +176,7 @@ data class SystemConfig(
 ```kotlin
 fun main() {
     val factory = ConfigFactory("../configDirPath").apply {
-        addValueConverter(Long::class.java) { value, _ ->
+        addValueConverter(Long::class.java) { value, _, _ ->
             value.toLong() * 1000
         }
     }
