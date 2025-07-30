@@ -74,9 +74,10 @@ class ConfigFactory(configDir: String) {
      * @param converter A lambda function that accepts two arguments:
      * 1. The [String] value to be converted.
      * 2. The target [Type] the value must be converted to (useful for generic types).
+     * 3. An array of the actual [Type] arguments; the array will be empty if the target [Type] is not generic.
      * The function must return the successfully converted value; returning `null` is not allowed.
      */
-    fun addValueConverter(type: Class<*>, converter: (String, Type) -> Any) {
+    fun addValueConverter(type: Class<*>, converter: (String, Type, Array<Type>) -> Any) {
         valueConverter.addValueConverter(type, converter)
     }
 

@@ -57,7 +57,7 @@ internal class ValueConverter {
      * Stores additional, user-defined value converters, mapped by the target type they can convert to.
      * These converters take precedence over the built-in conversion mechanisms.
      */
-    private val valueConverters = mutableMapOf<Class<*>, (String, Type) -> Any>()
+    private val valueConverters = mutableMapOf<Class<*>, (String, Type, Array<Type>) -> Any>()
 
     /**
      * Registers a custom converter for a specific target type.
@@ -66,10 +66,10 @@ internal class ValueConverter {
      * to perform the string-to-object conversion. Custom converters override default behavior.
      *
      * @param type The [Class] representing the target type this converter can produce.
-     * @param converter A lambda function that takes the string `value` to convert and the `type`
-     * to convert to, returning the converted object.
+     * @param converter A lambda function that takes the string `value` to convert, the `type`
+     * to convert to, an array of type arguments if the type is generic, and returning the converted object.
      */
-    fun addValueConverter(type: Class<*>, converter: (String, Type) -> Any) {
+    fun addValueConverter(type: Class<*>, converter: (String, Type, Array<Type>) -> Any) {
         valueConverters[type] = converter
     }
 
@@ -98,15 +98,15 @@ internal class ValueConverter {
         val rawType = type.asClass()
 
         return when {
-            valueConverters.containsKey(rawType) -> valueConverters[rawType]!!(value, type)
+            valueConverters.containsKey(rawType) -> valueConverters[rawType]!!(value, type, type.getTypeArguments())
 
             rawType.isString -> value
 
             rawType.isEnum -> rawType.toEnum(value)
 
-            rawType.isCollection -> rawType.toCollection(this, value, type.getTypeParameter())
+            rawType.isCollection -> rawType.toCollection(this, value, type.getTypeArgument())
 
-            rawType.isMap -> rawType.toMap(this, value, type.getKeyTypeParameter(), type.getValueTypeParameter())
+            rawType.isMap -> rawType.toMap(this, value, type.getKeyTypeArgument(), type.getValueTypeArgument())
 
             rawType.isPrimitiveArray -> rawType.toPrimitiveArray(value)
 
@@ -140,7 +140,7 @@ internal class ValueConverter {
                 if (result == null) {
                     for ((key, converter) in valueConverters.entries.toList()) {
                         if (key.isAssignableFrom(rawType)) {
-                            result = converter(value, rawType)
+                            result = converter(value, rawType, type.getTypeArguments())
 
                             break
                         }
@@ -164,48 +164,49 @@ internal class ValueConverter {
  */
 private fun Type.asClass() = when (this) {
     is Class<*> -> this
-
-    is ParameterizedType -> when (val classType = rawType as Class<*>) {
-        Collection::class.java, List::class.java, Set::class.java, Map::class.java -> classType
-
-        else -> throw UnsupportedTypeConversionException(
-            "Unsupported parameterized type: $typeName. " +
-            "Only Collection, List, Set, and Map types are supported by default. " +
-            "Use addValueConverter(...) to add support for additional types."
-        )
-    }
+    is ParameterizedType -> rawType as Class<*>
 
     else -> throw UnsupportedTypeConversionException(this)
 }
 
 /**
- * Returns the actual type parameter of this type.
+ * Returns an array of the actual type arguments of this type.
+ * If the type is parameterized, the returned array will be empty.
+ */
+private fun Type.getTypeArguments() = if (this is ParameterizedType) {
+    actualTypeArguments
+} else {
+    emptyArray()
+}
+
+/**
+ * Returns the actual type argument of this type.
  *
  * Throws [IllegalArgumentException] if this type is not parameterized.
  */
-private fun Type.getTypeParameter() = if (this is ParameterizedType) {
+private fun Type.getTypeArgument() = if (this is ParameterizedType) {
     actualTypeArguments[0]
 } else {
     throw IllegalArgumentException("Target type $this is not a parameterized type")
 }
 
 /**
- * Returns the actual key type parameter of this type.
+ * Returns the actual key type argument of this type.
  *
  * Throws [IllegalArgumentException] if this type is not parameterized.
  */
-private fun Type.getKeyTypeParameter() = if (this is ParameterizedType) {
+private fun Type.getKeyTypeArgument() = if (this is ParameterizedType) {
     actualTypeArguments[0]
 } else {
     throw IllegalArgumentException("Target type $this is not a parameterized type")
 }
 
 /**
- * Returns the actual value type parameter of this type.
+ * Returns the actual value type argument of this type.
  *
  * Throws [IllegalArgumentException] if this type is not parameterized.
  */
-private fun Type.getValueTypeParameter() = if (this is ParameterizedType) {
+private fun Type.getValueTypeArgument() = if (this is ParameterizedType) {
     actualTypeArguments[1]
 } else {
     throw IllegalArgumentException("Target type $this is not a parameterized type")

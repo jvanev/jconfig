@@ -134,7 +134,7 @@ data class SystemConfig(
 ```kotlin
 fun main() {
     val factory = ConfigFactory("../configDirPath").apply {
-        addValueConverter(DateTimeFormatter::class.java) { value, _ ->
+        addValueConverter(DateTimeFormatter::class.java) { value, targetType, actualTypeArgumentsArray ->
             DateTimeFormatter.ofPattern(value)
         }
     }

@@ -179,7 +179,7 @@ class ConfigValueConversionTest {
         @Test
         fun onAddedSupporter_ShouldSupportCustomReferenceType() {
             val factory = ConfigFactory(TEST_RESOURCES_DIR + "config")
-            factory.addValueConverter(DateTimeFormatter::class.java) { value, type ->
+            factory.addValueConverter(DateTimeFormatter::class.java) { value, type, _ ->
                 DateTimeFormatter.ofPattern(value)
             }
 
@@ -191,10 +191,10 @@ class ConfigValueConversionTest {
         @Test
         fun onAddedSupporter_ShouldContainUsableCustomReferenceType() {
             val factory = ConfigFactory(TEST_RESOURCES_DIR + "config")
-            factory.addValueConverter(DateTimeFormatter::class.java) { value, type ->
+            factory.addValueConverter(DateTimeFormatter::class.java) { value, type, _ ->
                 DateTimeFormatter.ofPattern(value)
             }
-            factory.addValueConverter(URL::class.java) { value, type ->
+            factory.addValueConverter(URL::class.java) { value, type, _ ->
                 URI.create(value).toURL()
             }
 

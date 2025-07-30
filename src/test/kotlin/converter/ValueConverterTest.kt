@@ -16,6 +16,7 @@
 package com.jvanev.kconfig.converter
 
 import org.junit.jupiter.api.Test
+import java.util.LinkedList
 import kotlin.test.assertEquals
 
 class ValueConverterTest {
@@ -58,7 +59,26 @@ class ValueConverterTest {
     class ExampleType(
         val list: List<Int>,
         val map: Map<String, Int>,
+        val stack: Stack<Int>,
     )
+
+    class Stack<T> {
+        private val items: MutableList<T> = LinkedList()
+
+        val size: Int get() = items.size
+
+        fun push(item: T) {
+            items.addLast(item)
+        }
+
+        fun pop(): T {
+            return items.last()
+        }
+
+        fun all(): List<T> {
+            return items.toList()
+        }
+    }
 
     @Test
     fun shouldConvertToCollection() {
@@ -80,6 +100,28 @@ class ValueConverterTest {
         )
 
         assertEquals(expectedResult, converter.convert(entries, type))
+        assertEquals(emptyMap<String, Int>(), converter.convert("", type))
+    }
+
+    @Test
+    fun shouldSupportCustomGenericTypes() {
+        val entries = "1, 2, 3, 4"
+        val converter = ValueConverter().apply {
+            addValueConverter(Stack::class.java) { value, _, typeArgs ->
+                val entries = value.split("\\s*,\\s*".toRegex())
+                val stack = Stack<Any>()
+
+                for (entry in entries) {
+                    stack.push(convert(entry, typeArgs[0]))
+                }
+
+                stack
+            }
+        }
+        val type = ExampleType::class.java.getDeclaredField("stack").genericType
+        val stack = converter.convert(entries, type) as Stack<*>
+
+        assertEquals(listOf(1, 2, 3, 4), stack.all())
     }
 
     enum class LogLevel {
