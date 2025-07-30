@@ -72,7 +72,7 @@ class ValueConverterTest {
         }
 
         fun pop(): T {
-            return items.last()
+            return items.removeLast()
         }
 
         fun all(): List<T> {
