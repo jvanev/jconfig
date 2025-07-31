@@ -15,9 +15,12 @@
  */
 package com.jvanev.kconfig.converter
 
+import com.jvanev.kconfig.ValueConversionException
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.time.LocalDateTime
+import java.time.temporal.Temporal
 import java.util.LinkedList
 import kotlin.test.assertEquals
 
@@ -154,6 +157,28 @@ class ValueConverterTest {
     }
 
     @Test
+    fun shouldThrowOnMalformedMapEntries() {
+        val type = ExampleType::class.java.getDeclaredField("map").genericType
+
+        assertThrows<IllegalArgumentException> { converter.convert("Skill1 : 7200,", type) }
+        assertThrows<IllegalArgumentException> { converter.convert("Skill1 ; 7200", type) }
+        assertThrows<IllegalArgumentException> { converter.convert(",Skill1 : 7200", type) }
+        assertThrows<IllegalArgumentException> { converter.convert("Skill1, : 7200", type) }
+    }
+
+    @Test
+    fun shouldUseCustomConvertorWithAssignableReturnValue_IfNoDirectTypeMatchFound() {
+        val converter = ValueConverter().apply {
+            addValueConverter(Temporal::class.java) { type, _, _ ->
+                LocalDateTime.parse(type)
+            }
+        }
+        val value = "2025-07-31T17:55:12"
+
+        assertEquals(LocalDateTime.parse(value), converter.convert(value, LocalDateTime::class.java))
+    }
+
+    @Test
     fun shouldSupportCustomGenericTypes() {
         val entries = "1, 2, 3, 4"
         val converter = ValueConverter().apply {
@@ -201,5 +226,21 @@ class ValueConverterTest {
         val value = "127"
 
         assertEquals(TestType(127), converter.convert(value, TestType::class.java))
+    }
+
+    data class TestTypeWithThrowingValueOf(val value: Int) {
+        companion object {
+            @JvmStatic
+            fun valueOf(value: String): TestTypeWithThrowingValueOf {
+                throw RuntimeException()
+            }
+        }
+    }
+
+    @Test
+    fun shouldThrowOnValueOfInvocationException() {
+        assertThrows<ValueConversionException> {
+            converter.convert("test", TestTypeWithThrowingValueOf::class.java)
+        }
     }
 }

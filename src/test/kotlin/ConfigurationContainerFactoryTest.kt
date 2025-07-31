@@ -180,6 +180,39 @@ class ConfigurationContainerFactoryTest {
             factory.createConfigContainer(DuplicateConfigFileNameDeclarationContainer::class.java)
         }
     }
+
+    data class MultipleConstructorsContainer(
+        val baseConfiguration: BaseConfiguration,
+    ) {
+        constructor(test: Boolean, baseConfiguration: BaseConfiguration) : this(baseConfiguration)
+    }
+
+    @Test
+    fun containerWithMultipleConstructors_ShouldThrow() {
+        assertThrows<InvalidDeclarationException> {
+            factory.createConfigContainer(MultipleConstructorsContainer::class.java)
+        }
+    }
+
+    @ConfigFile("BaseTestConfiguration.properties")
+    data class MultipleConstructorsConfiguration(
+        @ConfigProperty("BooleanProperty")
+        val booleanProperty: Boolean = false, // This will generate a constructor with a default for this property
+
+        @ConfigProperty(name = "MissingProperty", defaultValue = "0xFF")
+        val integerProperty: Int,
+    )
+
+    data class MultipleConstructorsConfigurationContainer(
+        val baseConfiguration: MultipleConstructorsConfiguration,
+    )
+
+    @Test
+    fun containerContainingConfigurationWithMultipleConstructors_ShouldThrow() {
+        assertThrows<ConfigurationBuildException> {
+            factory.createConfigContainer(MultipleConstructorsConfigurationContainer::class.java)
+        }
+    }
 }
 
 private val TEST_RESOURCES_DIR = System.getProperty("user.dir") + "/src/test/resources/"

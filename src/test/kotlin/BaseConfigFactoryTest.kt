@@ -111,6 +111,22 @@ class BaseConfigFactoryTest {
             factory.createConfig(MissingConfigFileAnnotation::class.java)
         }
     }
+
+    @ConfigFile("BaseTestConfiguration.properties")
+    data class MultipleConstructorsConfiguration(
+        @ConfigProperty("BooleanProperty")
+        val booleanProperty: Boolean = false, // This will generate a constructor with a default for this property
+
+        @ConfigProperty(name = "MissingProperty", defaultValue = "0xFF")
+        val integerProperty: Int,
+    )
+
+    @Test
+    fun configurationWithMultipleConstructors_ShouldThrow() {
+        assertThrows<ConfigurationBuildException> {
+            factory.createConfig(MultipleConstructorsConfiguration::class.java)
+        }
+    }
 }
 
 private val TEST_RESOURCES_DIR = System.getProperty("user.dir") + "/src/test/resources/"
