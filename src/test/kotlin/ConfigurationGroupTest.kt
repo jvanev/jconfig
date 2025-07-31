@@ -201,7 +201,7 @@ class ConfigurationGroupTest {
     inner class IncorrectGroupSetupTests {
         @Test
         fun missingDefaultValueInDependentGroup_ShouldThrow() {
-            assertThrows<IllegalArgumentException> {
+            assertThrows<ConfigurationBuildException> {
                 factory.createConfig(MissingDefaultValueOnDependentParameter::class.java)
             }
         }

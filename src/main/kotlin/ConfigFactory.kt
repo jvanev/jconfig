@@ -20,7 +20,6 @@ import com.jvanev.kconfig.annotation.ConfigGroup
 import com.jvanev.kconfig.annotation.ConfigProperty
 import com.jvanev.kconfig.annotation.DependsOn
 import com.jvanev.kconfig.converter.ValueConverter
-import com.jvanev.kconfig.exception.UnsupportedTypeConversionException
 import com.jvanev.kconfig.resolver.ValueResolver
 import java.io.IOException
 import java.lang.reflect.Type
@@ -86,14 +85,12 @@ class ConfigFactory(configDir: String) {
      *
      * @return A fully initialized instance of the *Configuration Container*.
      *
-     * @throws IllegalArgumentException If the provided [type] does not declare a primary constructor,
-     * if any of its primary constructor parameters are not valid **Configuration Types** (missing [ConfigFile]),
-     * or if multiple properties within the container reference the same configuration file name.
-     * @throws IOException If there's an issue loading a `.properties` file from `configDir`.
+     * @throws InvalidDeclarationException If the provided [type] is not correctly set up.
+     * @throws ConfigurationBuildException If an error occurs when creating the *Configuration Container*.
      */
     fun <T : Any> createConfigContainer(type: Class<T>): T {
         if (type.constructors.size != 1) {
-            throw IllegalArgumentException(
+            throw InvalidDeclarationException(
                 "Configuration container ${type.simpleName} must declare exactly one constructor"
             )
         }
@@ -104,17 +101,17 @@ class ConfigFactory(configDir: String) {
 
         for ((i, parameter) in constructor.parameters.withIndex()) {
             val parameterType = parameter.type
-            val annotation = requireNotNull(parameter.type.getDeclaredAnnotation(ConfigFile::class.java)) {
+            val annotation = parameterType.requireAnnotation(ConfigFile::class.java) {
                 "Type ${parameterType.simpleName} declared on parameter " +
-                "${type.simpleName}.${parameter.name} is not annotated with @ConfigFile"
+                        "${type.simpleName}.${parameter.name} is not annotated with @ConfigFile"
             }
 
             if (processedConfigurations.containsKey(annotation.name)) {
-                throw IllegalArgumentException(
+                throw InvalidDeclarationException(
                     "Configuration type ${parameterType.simpleName} of property " +
-                    "${type.simpleName}.${parameter.name} declares the same filename " +
-                    "(${annotation.name}) as the type of property " +
-                    "${type.simpleName}.${processedConfigurations[annotation.name]}"
+                            "${type.simpleName}.${parameter.name} declares the same filename " +
+                            "(${annotation.name}) as the type of property " +
+                            "${type.simpleName}.${processedConfigurations[annotation.name]}"
                 )
             }
 
@@ -122,11 +119,9 @@ class ConfigFactory(configDir: String) {
             arguments[i] = try {
                 createConfig(parameterType)
             } catch (e: Exception) {
-                System.err.println(
-                    "Failed to initialize configuration container property ${type.simpleName}.${parameter.name}"
+                throw ConfigurationBuildException(
+                    "Failed to initialize configuration container property ${type.simpleName}.${parameter.name}", e
                 )
-
-                throw e
             }
         }
 
@@ -144,11 +139,12 @@ class ConfigFactory(configDir: String) {
      *
      * @return A fully initialized instance of the *Configuration Type*.
      *
-     * @throws IllegalArgumentException If the provided [type] is not a valid *Configuration Type*
-     * (i.e., not annotated with [ConfigFile]).
+     * @throws InvalidDeclarationException If the provided [type] is not correctly set up.
+     * @throws ConfigurationBuildException If an error occurs when creating the *Configuration Type*.
+     * @throws IOException If there's an issue loading the `.properties` file from `configDir`.
      */
     fun <T : Any> createConfig(type: Class<T>): T {
-        val container = requireNotNull(type.getDeclaredAnnotation(ConfigFile::class.java)) {
+        val container = type.requireAnnotation(ConfigFile::class.java) {
             "Class ${type.simpleName} must be annotated with @ConfigFile"
         }
         val properties = getProperties(container.name)
@@ -157,9 +153,9 @@ class ConfigFactory(configDir: String) {
         return try {
             buildConfigTree(type, namespace)
         } catch (e: Exception) {
-            System.err.println("Failed to create an instance of configuration type ${type.simpleName}")
-
-            throw e
+            throw ConfigurationBuildException(
+                "Failed to create an instance of configuration type ${type.simpleName}", e
+            )
         }
     }
 
@@ -172,21 +168,19 @@ class ConfigFactory(configDir: String) {
      * recursively calls itself to build the nested group.
      * - If a parameter is a [ConfigProperty], it uses [ValueResolver] to determine its runtime
      * value, applying dependency checks and default values, and then converts the string value
-     * to the appropriate Kotlin type using [ValueConverter].
+     * to the appropriate type using [ValueConverter].
      *
      * @param type The [Class] of the configuration object (or group) currently being built.
      * @param namespace The [Namespace] object defining the current scope, properties, and dependency state.
      *
      * @return A fully initialized instance of the `container` type.
      *
-     * @throws IllegalArgumentException If the `container` lacks a primary constructor, contains
-     * duplicate [ConfigProperty.name]s, or if dependency chains are invalid (e.g., circular).
-     * @throws UnsupportedTypeConversionException If a property's resolved string value cannot be
-     * converted to its target Kotlin type.
+     * @throws InvalidDeclarationException If the `container` is not correctly set up.
+     * @throws ValueConversionException If a property's resolved string value cannot be converted to its target type.
      */
     private fun <T : Any> buildConfigTree(type: Class<T>, namespace: Namespace): T {
         if (type.constructors.size != 1) {
-            throw IllegalArgumentException(
+            throw InvalidDeclarationException(
                 "Configuration type ${type.simpleName} must declare exactly one constructor"
             )
         }
@@ -204,10 +198,10 @@ class ConfigFactory(configDir: String) {
                 val configProperty = parameter.requireConfigProperty(type)
 
                 if (processedKeys.containsKey(configProperty.name)) {
-                    throw IllegalArgumentException(
+                    throw InvalidDeclarationException(
                         "Configuration property '${configProperty.name}' declared on parameter " +
-                        "${type.simpleName}.${parameter.name} is also declared on parameter " +
-                        "${type.simpleName}.${processedKeys[configProperty.name]}"
+                                "${type.simpleName}.${parameter.name} is also declared on parameter " +
+                                "${type.simpleName}.${processedKeys[configProperty.name]}"
                     )
                 }
 
@@ -220,11 +214,11 @@ class ConfigFactory(configDir: String) {
                 arguments[i] = try {
                     valueConverter.convert(resolvedValue.trim(), parameter.parameterizedType)
                 } catch (e: Exception) {
-                    System.err.println(
-                        "Failed to initialize configuration property ${type.simpleName}.${parameter.name}"
+                    throw ValueConversionException(
+                        "Failed to convert the value for configuration property " +
+                                "${configProperty.name} (${type.simpleName}.${parameter.name})",
+                        e,
                     )
-
-                    throw e
                 }
             }
         }

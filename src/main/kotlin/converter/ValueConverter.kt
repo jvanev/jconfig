@@ -15,7 +15,8 @@
  */
 package com.jvanev.kconfig.converter
 
-import com.jvanev.kconfig.exception.UnsupportedTypeConversionException
+import com.jvanev.kconfig.UnsupportedTypeConversionException
+import com.jvanev.kconfig.ValueConversionException
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
@@ -126,14 +127,15 @@ internal class ValueConverter {
                 } catch (e: InvocationTargetException) {
                     val originalCause = e.targetException
 
-                    throw UnsupportedTypeConversionException(
+                    throw ValueConversionException(
                         "An error occurred while converting '$value' to ${rawType.simpleName} using valueOf method: " +
-                        originalCause.message,
-                        originalCause
+                                originalCause.message,
+                        originalCause,
                     )
                 } catch (e: Exception) {
-                    throw UnsupportedTypeConversionException(
-                        "Unexpected error occurred while converting '$value' to ${rawType.simpleName}: ${e.message}", e
+                    throw ValueConversionException(
+                        "An unexpected error occurred while converting '$value' to ${rawType.simpleName}: ${e.message}",
+                        e,
                     )
                 }
 
@@ -148,7 +150,7 @@ internal class ValueConverter {
                 }
 
                 if (result == null) {
-                    throw UnsupportedTypeConversionException(type)
+                    throw UnsupportedTypeConversionException(type, value)
                 }
 
                 result

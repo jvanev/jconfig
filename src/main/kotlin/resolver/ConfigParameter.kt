@@ -76,4 +76,8 @@ internal class ConfigParameter(container: Class<*>, parameter: Parameter) {
         dependencyName = dependencyInfo?.property ?: ""
         dependencyValue = dependencyInfo?.value ?: ""
     }
+
+    override fun toString(): String {
+        return "$propertyName ($parameterName)"
+    }
 }

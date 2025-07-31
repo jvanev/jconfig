@@ -222,7 +222,7 @@ class DependencyConfigurationTest {
     @ConfigFile("DependencyTestConfiguration.properties")
     data class DependencyWithNoDefaultValue(
         @ConfigProperty(name = "UndefinedProperty", defaultValue = "False")
-        val booleanProperty: Boolean = false,
+        val booleanProperty: Boolean,
 
         @ConfigProperty(name = "IntegerPropertyOne")
         @DependsOn("BooleanProperty")
@@ -251,7 +251,7 @@ class DependencyConfigurationTest {
     inner class InvalidDependencyDeclarationTests {
         @Test
         fun dependencyWithNoDefaultValue_ShouldThrow() {
-            assertThrows<IllegalArgumentException> {
+            assertThrows<ConfigurationBuildException> {
                 factory.createConfig(DependencyWithNoDefaultValue::class.java)
             }
         }
@@ -265,7 +265,7 @@ class DependencyConfigurationTest {
 
         @Test
         fun circularDependencyGraph_ShouldThrow() {
-            assertThrows<IllegalArgumentException> {
+            assertThrows<ConfigurationBuildException> {
                 factory.createConfig(CircularDependencyGraph::class.java)
             }
         }

@@ -17,7 +17,6 @@ package com.jvanev.kconfig
 
 import com.jvanev.kconfig.annotation.ConfigFile
 import com.jvanev.kconfig.annotation.ConfigProperty
-import com.jvanev.kconfig.exception.UnsupportedTypeConversionException
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -171,7 +170,7 @@ class ConfigValueConversionTest {
     inner class CustomTypeSupportTests {
         @Test
         fun shouldThrowOnUnsupportedReferenceType() {
-            assertThrows<UnsupportedTypeConversionException> {
+            assertThrows<ConfigurationBuildException> {
                 factory.createConfig(DateTimeFormatterConfigurationParameter::class.java)
             }
         }
@@ -233,28 +232,28 @@ class ConfigValueConversionTest {
     inner class InvalidPropertyTests {
         @Test
         fun invalidStringToIntegerConversion_ShouldThrow() {
-            assertThrows<IllegalArgumentException> {
+            assertThrows<ConfigurationBuildException> {
                 factory.createConfig(InvalidIntegerConfiguration::class.java)
             }
         }
 
         @Test
         fun invalidStringToCharacterConversion_ShouldThrow() {
-            assertThrows<IllegalArgumentException> {
+            assertThrows<ConfigurationBuildException> {
                 factory.createConfig(InvalidCharConfiguration::class.java)
             }
         }
 
         @Test
         fun invalidEnumCasing_shouldThrow() {
-            assertThrows<IllegalArgumentException> {
+            assertThrows<ConfigurationBuildException> {
                 factory.createConfig(InvalidEnumCasingConfiguration::class.java)
             }
         }
 
         @Test
         fun invalidStringToIntegerArrayConversion_ShouldThrow() {
-            assertThrows<IllegalArgumentException> {
+            assertThrows<ConfigurationBuildException> {
                 factory.createConfig(InvalidIntegerArrayConfiguration::class.java)
             }
         }

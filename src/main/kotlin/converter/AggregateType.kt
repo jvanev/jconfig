@@ -15,7 +15,7 @@
  */
 package com.jvanev.kconfig.converter
 
-import com.jvanev.kconfig.exception.UnsupportedTypeConversionException
+import com.jvanev.kconfig.UnsupportedTypeConversionException
 import java.lang.reflect.Type
 
 /**

@@ -164,7 +164,7 @@ class ConfigurationContainerFactoryTest {
 
     @Test
     fun incorrectlyConfiguredContainer_ShouldThrow() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<InvalidDeclarationException> {
             factory.createConfigContainer(UnannotatedTypeInConfigurationContainer::class.java)
         }
     }
@@ -176,7 +176,7 @@ class ConfigurationContainerFactoryTest {
 
     @Test
     fun multipleTypesDeclaringTheSameFilename_ShouldThrow() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<InvalidDeclarationException> {
             factory.createConfigContainer(DuplicateConfigFileNameDeclarationContainer::class.java)
         }
     }

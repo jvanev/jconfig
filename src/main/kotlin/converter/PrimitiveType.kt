@@ -35,7 +35,7 @@ internal val Class<*>.isBoxedPrimitive
  */
 internal fun Class<*>.toPrimitive(value: String): Any {
     if (value.isEmpty()) {
-        throw IllegalArgumentException("Cannot convert an empty value to a primitive")
+        throw IllegalArgumentException("Cannot convert an empty value to primitive type ${this.simpleName}")
     }
 
     return when (this) {

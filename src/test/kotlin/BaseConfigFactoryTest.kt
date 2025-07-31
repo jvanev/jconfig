@@ -67,7 +67,7 @@ class BaseConfigFactoryTest {
 
     @Test
     fun missingPropertiesWithNoDefaultValue_ShouldThrow() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<ConfigurationBuildException> {
             factory.createConfig(InvalidBaseConfiguration::class.java)
         }
     }
@@ -83,7 +83,7 @@ class BaseConfigFactoryTest {
 
     @Test
     fun multipleDeclarationsOfSameKeyName_ShouldThrow() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<ConfigurationBuildException> {
             factory.createConfig(MultipleDeclarationsOfTheSameKeyName::class.java)
         }
     }
@@ -95,7 +95,7 @@ class BaseConfigFactoryTest {
 
     @Test
     fun missingConfigPropertyAnnotation_ShouldThrow() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<ConfigurationBuildException> {
             factory.createConfig(MissingConfigurationParameterAnnotation::class.java)
         }
     }
@@ -107,7 +107,7 @@ class BaseConfigFactoryTest {
 
     @Test
     fun missingConfigFileAnnotation_ShouldThrow() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<InvalidDeclarationException> {
             factory.createConfig(MissingConfigFileAnnotation::class.java)
         }
     }

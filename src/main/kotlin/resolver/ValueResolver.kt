@@ -15,6 +15,8 @@
  */
 package com.jvanev.kconfig.resolver
 
+import com.jvanev.kconfig.CircularDependencyException
+import com.jvanev.kconfig.InvalidDeclarationException
 import com.jvanev.kconfig.annotation.ConfigGroup
 import com.jvanev.kconfig.annotation.ConfigProperty
 import com.jvanev.kconfig.annotation.DependsOn
@@ -104,7 +106,7 @@ internal class ValueResolver(
      *
      * @return `true` if the group's dependency condition is satisfied, `false` otherwise.
      *
-     * @throws IllegalArgumentException If the group depends on a non-existent property
+     * @throws InvalidDeclarationException If the group depends on a non-existent property
      * or if a circular dependency is detected in the chain.
      */
     fun isGroupDependencySatisfied(parameter: Parameter): Boolean {
@@ -113,7 +115,7 @@ internal class ValueResolver(
         }
 
         val dependencyInfo = parameter.requireDependsOn(container)
-        val dependency = requireNotNull(configParameters[dependencyInfo.property])
+        val dependency = configParameters[dependencyInfo.property]!!
         val dependencyValue = if (!dependency.hasDependency || isDependencySatisfied(dependency)) {
             dependency.getValue()
         } else {
@@ -136,7 +138,7 @@ internal class ValueResolver(
      *
      * @return `true` if the dependency condition is satisfied, `false` otherwise.
      *
-     * @throws IllegalArgumentException If the property depends on a non-existent property
+     * @throws InvalidDeclarationException If the property depends on a non-existent property
      * or if a circular dependency is detected in the chain.
      */
     private fun isDependencySatisfied(configParameter: ConfigParameter): Boolean {
@@ -161,27 +163,23 @@ internal class ValueResolver(
      * @return `true` if the dependency condition for the current `dependentParameter` and its
      * entire upstream chain is satisfied, `false` otherwise.
      *
-     * @throws IllegalArgumentException If a circular dependency is detected (e.g., A -> B -> A),
-     * or if a property in the dependency chain depends on a non-existent property.
+     * @throws CircularDependencyException If a circular dependency is detected (e.g., A -> B -> A).
+     * @throws InvalidDeclarationException If a property in the dependency chain depends on a non-existent property.
      */
     private fun isDependencyChainSatisfied(
         dependentParameter: ConfigParameter,
         checkedLinks: MutableSet<String> = LinkedHashSet(),
     ): Boolean {
         if (!checkedLinks.add(dependentParameter.propertyName)) {
-            val message = StringBuilder().apply {
-                append("Circular dependency chain detected: ")
-
+            val parameters = mutableListOf<ConfigParameter>().apply {
                 for (link in checkedLinks) {
-                    val parameter = requireNotNull(configParameters[link])
-
-                    append("${parameter.parameterName} (${parameter.propertyName}) depends on -> ")
+                    add(configParameters[link]!!)
                 }
 
-                append("${dependentParameter.parameterName} (${dependentParameter.propertyName})")
+                add(dependentParameter)
             }
 
-            throw IllegalArgumentException(message.toString())
+            throw CircularDependencyException(parameters)
         }
 
         val dependency = dependentParameter.getDependency()
@@ -197,28 +195,25 @@ internal class ValueResolver(
     /**
      * Converts a [Parameter] into its corresponding [ConfigParameter] representation.
      *
-     * @throws IllegalArgumentException If the parameter is not a valid configuration property
+     * @throws InvalidDeclarationException If the parameter is not a valid configuration property
      * (i.e., not found in the [configParameters] map, or missing [ConfigProperty] annotation).
      */
     private fun Parameter.asConfigParameter(): ConfigParameter {
         val configProperty = requireConfigProperty(container)
 
-        return requireNotNull(configParameters[configProperty.name]) {
+        return configParameters[configProperty.name] ?: throw InvalidDeclarationException(
             "Parameter ${container.simpleName}.$name is not a configuration parameter"
-        }
+        )
     }
 
     /**
      * Retrieves the [ConfigParameter] that this parameter's dependency refers to.
      *
-     * @throws IllegalArgumentException If this parameter does not declare a dependency
+     * @throws InvalidDeclarationException If this parameter does not declare a dependency
      * or if the declared dependency property does not exist within the current container.
      */
-    private fun ConfigParameter.getDependency(): ConfigParameter {
-        return configParameters[dependencyName] ?: throw IllegalArgumentException(
-            "Cannot resolve dependency $dependencyName declared on $parameterName"
-        )
-    }
+    private fun ConfigParameter.getDependency(): ConfigParameter = configParameters[dependencyName]
+        ?: throw InvalidDeclarationException("Cannot resolve dependency $dependencyName declared on $this")
 
     /**
      * Retrieves the configuration value for this [ConfigParameter] from the underlying
