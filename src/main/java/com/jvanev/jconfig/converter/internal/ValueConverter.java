@@ -23,12 +23,12 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Provides a flexible mechanism for converting {@link String} values to common Java types.
@@ -78,7 +78,7 @@ import java.util.UUID;
  * conversion provided by this class will be skipped, and your custom converter will be invoked instead.
  */
 public final class ValueConverter {
-    private final Map<Class<?>, IValueConverter> converters = new HashMap<>();
+    private final Map<Class<?>, IValueConverter> converters = new ConcurrentHashMap<>();
 
     /**
      * Registers a custom converter for a specific target type.
