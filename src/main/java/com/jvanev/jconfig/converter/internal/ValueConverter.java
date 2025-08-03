@@ -96,7 +96,7 @@ public final class ValueConverter {
          *
          * @param instance The instance this method will be invoked on;
          *                 since we're looking for static methods, this value is always {@code null}
-         * @param value    The value to be passed to the actual representation
+         * @param value    The value to be passed to the actual implementation
          *
          * @return The return value depends on the specific implementation of this method.
          *
@@ -198,12 +198,10 @@ public final class ValueConverter {
                 result = valueOfMethod.valueOf(null, value);
             }
         } catch (InvocationTargetException e) {
-            var originalException = e.getTargetException();
-
             throw new ValueConversionException(
                 "An error occurred while converting '" + value + "' to " + rawType.getSimpleName() +
                 " using valueOf method.",
-                originalException
+                e.getTargetException()
             );
         } catch (Exception e) {
             throw new ValueConversionException(
