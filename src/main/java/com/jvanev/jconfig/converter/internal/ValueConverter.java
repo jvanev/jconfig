@@ -81,6 +81,31 @@ public final class ValueConverter {
     private final Map<Class<?>, IValueConverter> converters = new ConcurrentHashMap<>();
 
     /**
+     * A cache of valueOf methods mapped to the type they produce.
+     */
+    private final Map<Class<?>, ValueOfMethod> valueOfMethods = new ConcurrentHashMap<>();
+
+    /**
+     * Implementations of this interface represent a static valueOf method
+     * accepting a string value and returning an instance of a specific type.
+     */
+    @FunctionalInterface
+    private interface ValueOfMethod {
+        /**
+         * Returns the value produced by the actual implementation.
+         *
+         * @param instance The instance this method will be invoked on;
+         *                 since we're looking for static methods, this value is always {@code null}
+         * @param value    The value to be passed to the actual representation
+         *
+         * @return The return value depends on the specific implementation of this method.
+         *
+         * @throws ReflectiveOperationException If an error occurs during the reflective call.
+         */
+        Object valueOf(Object instance, String value) throws ReflectiveOperationException;
+    }
+
+    /**
      * Registers a custom converter for a specific target type.
      * <p>
      * When a conversion is requested for the specified type, the specified converter will be invoked
@@ -153,13 +178,25 @@ public final class ValueConverter {
         Object result = null;
 
         try {
-            var method = rawType.getMethod("valueOf", String.class);
+            var valueOfMethod = valueOfMethods.computeIfAbsent(
+                rawType, key -> {
+                    try {
+                        var method = key.getMethod("valueOf", String.class);
 
-            if (Modifier.isStatic(method.getModifiers()) && rawType.isAssignableFrom(method.getReturnType())) {
-                result = method.invoke(null, value);
+                        if (Modifier.isStatic(method.getModifiers()) && key.isAssignableFrom(method.getReturnType())) {
+                            return method::invoke;
+                        }
+                    } catch (NoSuchMethodException e) {
+                        // Continue to the custom converters
+                    }
+
+                    return null;
+                }
+            );
+
+            if (valueOfMethod != null) {
+                result = valueOfMethod.valueOf(null, value);
             }
-        } catch (NoSuchMethodException e) {
-            // Continue to the custom converters
         } catch (InvocationTargetException e) {
             var originalException = e.getTargetException();
 
