@@ -1,26 +1,25 @@
-# KConfig
+# JConfig
 
-A lightweight, declarative configuration factory for Java and Kotlin. Provides type-safety, effortless conditional
+A lightweight, declarative configuration factory for Java. Provides type-safety, effortless conditional
 value resolution, grouping, namespaces, and a flexible value conversion mechanism.
 
 ---
 
 ## Requirements
 
-Built with Kotlin 2.2.0, requires Java 17 or newer.
-
-Usage in Java projects requires `kotlin-stdlib 2.2.0`
+Requires Java 17 or newer.
 
 ---
 
 ## Features
 
-- Simple and straightforward API - Just 3 simple methods to remember
+- Minimal API surface - 3 core methods and 4 annotations
 - Declarative configuration types - Describe your configurations and let the factory do the work for you
 - Extensible value conversion mechanism - Add your own value converter if the defaults are not enough
-- Configuration dependencies - Get rid of the `if` statements for dependent configuration values,
-  either individual or entire groups
+- Configuration dependencies - Get rid of the `if` statements for individual dependent configuration
+  values or entire groups
 - Namespaces - Reuse configuration types for groups of configurations with identical structures
+- Fail-fast loading - Invalid configurations are caught early
 
 ---
 
@@ -37,50 +36,48 @@ The most basic usage of this factory requires two steps:
 
 ```properties
 URL = jdbc:mariadb://127.0.0.1:3306/test
-User = kconfig
-Password = kconfig_password
+User = JConfig
+Password = JConfig_Password
 PoolSize = 7
 ```
 
-`DatabaseConfig.kt`
+`DatabaseConfig.java`
 
-```kotlin
-@ConfigFile("Database.properties")
-data class DatabaseConfig(
-    @ConfigProperty("URL")
-    val url: String,
-
-    @ConfigProperty("User")
-    val user: String,
-
-    @ConfigProperty("Password")
-    val password: String,
-
-    @ConfigProperty("PoolSize")
-    val poolSize: Int,
+```java
+@ConfigFile(filename = "Database.properties")
+public record DatabaseConfig(
+    @ConfigProperty(name = "URL") String url,
+    @ConfigProperty(name = "User") String user,
+    @ConfigProperty(name = "Password") String password,
+    @ConfigProperty(name = "PoolSize") int poolSize,
 
     // When no such key exists in the properties file, a defaultValue is required
-    @ConfigProperty(name = "NonExistent", defaultValue = "False")
-    val nonExistent: Boolean,
-)
+    @ConfigProperty(name = "NonExistent", defaultValue = "False") boolean nonExistent
+) {}
 ```
 
-`Main.kt`
+`Main.java`
 
-```kotlin
-fun main() {
-    val factory = ConfigFactory("../configDirPath")
-    val dbConfig = factory.createConfig(DatabaseConfig::class.java)
+```java
+public static void main(String[] args) {
+    var factory = new ConfigFactory("../configDir");
+    var dbConfig = factory.createConfig(DatabaseConfig.class);
 
-    println(dbConfig)
+    System.out.println(dbConfig);
+
+    // Output:
+    // DatabaseConfig[
+    //     url=jdbc:mariadb://127.0.0.1:3306/test,
+    //     user=JConfig,
+    //     password=JConfig_Password,
+    //     poolSize=7,
+    //     nonExistent=false
+    // ]
 }
 ```
 
-> **Output:** DatabaseConfig(url=jdbc:mariadb://127.0.0.1:3306/test, user=kconfig, password=kconfig_password,
-> poolSize=7, nonExistent=false)
-
 > **Note:** If a configuration property is not found in the properties file and no explicit defaultValue
-> is set within its `@ConfigProperty` annotation, KConfig will attempt to convert an empty string ("")
+> is set within its `@ConfigProperty` annotation, JConfig will attempt to convert an empty string ("")
 > for that property. If the conversion mechanism can successfully produce a valid value from an empty string
 > (e.g., an empty list for a List<T> type, or an empty map for a Map<K, V> type), then you are not required
 > to provide an explicit `defaultValue`. However, if an empty string cannot be converted to the required type
@@ -103,14 +100,14 @@ common types by default:
   to the target type.
 - **Collections:** `Collection`, `List`, `Set`. Elements within the collection are also converted recursively based on
   their generic type argument (e.g., `List<Int>` will convert string "1,2,3" into a list of integers).
-- **Maps:** `Map`. Both keys and values within the map are converted recursively based on their generic type arguments
+- **Maps:** For `Map<K, V>`, both keys and values are converted recursively based on their generic type arguments
   (e.g., `Map<String, Int>` will convert "key1=1,key2=2" into a map with string keys and integer values).
 
 When the type of the configuration property is:
 
 - `Collection` or `List` - An `ArrayList` will be used for its initialization (through `mutableListOf`)
-- `Set` - A `LinkedHashSet` will be used for its initialization (through `mutableSetOf`)
-- `Map` - A `LinkedHashMap` will be used for its initialization (through `mutableMapOf`)
+- `Set` - A `LinkedHashSet` will be used for its initialization
+- `Map` - A `LinkedHashMap` will be used for its initialization
 
 ### Custom Converters
 
@@ -127,32 +124,32 @@ We will use `DateTimeFormatter` as an example of how to add support for an unsup
 LogTimestampFormat = yyyy-MM-dd HH:mm:ss.SSS
 ```
 
-`SystemConfig.kt`
+`SystemConfig.java`
 
-```kotlin
-@ConfigFile("System.properties")
-data class SystemConfig(
-    @ConfigProperty("LogTimestampFormat")
-    val logTimestampFormatter: DateTimeFormatter,
-)
+```java
+@ConfigFile(filename = "System.properties")
+public record SystemConfig(
+    @ConfigProperty(name = "LogTimestampFormat")
+    DateTimeFormatter logTimestampFormatter
+) {}
 ```
 
-`Main.kt`
+`Main.java`
 
-```kotlin
-fun main() {
-    val factory = ConfigFactory("../configDirPath").apply {
-        addValueConverter(DateTimeFormatter::class.java) { value, targetType, actualTypeArgumentsArray ->
-            DateTimeFormatter.ofPattern(value)
-        }
-    }
-    val systemConfig = factory.createConfig(SystemConfig::class.java)
+```java
+public static void main(String[] args) {
+    var factory = new ConfigFactory("../configDir");
+    factory.addValueConverter(
+        DateTimeFormatter.class,
+        (type, typeArgs, value) -> DateTimeFormatter.ofPattern(value)
+    );
+    var systemConfig = factory.createConfig(SystemConfig.class);
 
-    println(LocalDateTime.now().format(systemConfig.logTimestampFormatter))
+    System.out.println(LocalDateTime.parse("2025-08-03T10:15:30").format(systemConfig.logTimestampFormatter()));
+
+    // Output: 2025-08-03 10:15:30.000
 }
 ```
-
-> **Output:** 2025-07-30 19:51:17.943
 
 #### Custom Converters and Overriding Behavior
 
@@ -169,32 +166,31 @@ the default conversion mechanism for this type.
 RetryDelay = 5
 ```
 
-`SystemConfig.kt`
+`SystemConfig.java`
 
-```kotlin
-@ConfigFile("System.properties")
-data class SystemConfig(
-    @ConfigProperty("RetryDelay")
-    val retryDelay: Long,
-)
+```java
+@ConfigFile(filename = "System.properties")
+public record SystemConfig(
+    @ConfigProperty(name = "RetryDelay") long retryDelay
+) {}
 ```
 
-`Main.kt`
+`Main.java`
 
-```kotlin
-fun main() {
-    val factory = ConfigFactory("../configDirPath").apply {
-        addValueConverter(Long::class.java) { value, _, _ ->
-            value.toLong() * 1000
-        }
-    }
-    val systemConfig = factory.createConfig(SystemConfig::class.java)
+```java
+public static void main(String[] args) {
+    var factory = new ConfigFactory("../configDir");
+    factory.addValueConverter(
+        long.class,
+        (type, typeArgs, value) -> Long.parseLong(value) * 1000
+    );
+    var systemConfig = factory.createConfig(SystemConfig.class);
 
-    println(systemConfig.retryDelay)
+    System.out.println(systemConfig.retryDelay());
+
+    // Output: 5000
 }
 ```
-
-> **Output:** 5000
 
 ---
 
@@ -204,8 +200,8 @@ It's not uncommon for a configuration value to depend on another configuration v
 the `LogLevel` should be set to `DEBUG` only in developer mode, or fall back to `INFO` otherwise. Usually,
 such setup involves `if` statements determining the value at runtime.
 
-KConfig offers another approach - Configuration Dependencies. Declaratively describe the relationships between
-dependent properties, and KConfig will resolve the final runtime values for you.
+JConfig offers another approach - Configuration Dependencies. Declaratively describe the relationships between
+dependent properties, and JConfig will resolve the final runtime values for you.
 
 If the value of the dependency matches the required value, the dependent property will be initialized with the
 value from the configuration file; otherwise, its `@ConfigProperty.defaultValue` will be used.
@@ -215,38 +211,39 @@ value from the configuration file; otherwise, its `@ConfigProperty.defaultValue`
 `Developer.properties`
 
 ```properties
-DeveloperMode = False
+DeveloperMode = false
 LogLevel = DEBUG
 ```
 
-`DeveloperConfig.kt`
+`DeveloperConfig.java`
 
-```kotlin
-//import java.lang.System.Logger.Level
-
-@ConfigFile("Developer.properties")
-data class DeveloperConfig(
-    @ConfigProperty("DeveloperMode")
-    val developerMode: Boolean,
+```java
+@ConfigFile(filename = "Developer.properties")
+public record DeveloperConfig(
+    @ConfigProperty(name = "DeveloperMode") boolean developerMode,
 
     @ConfigProperty(name = "LogLevel", defaultValue = "INFO")
-    @DependsOn(property = "DeveloperMode", value = "True")
-    val logLevel: Level,
-)
+    @DependsOn(property = "DeveloperMode", value = "true")
+    System.Logger.Level logLevel
+) {}
 ```
 
-`Main.kt`
+`Main.java`
 
-```kotlin
-fun main() {
-    val factory = ConfigFactory("../configDirPath")
-    val developerConfig = factory.createConfig(DeveloperConfig::class.java)
+```java
+public static void main(String[] args) {
+    var factory = new ConfigFactory("../configDir");
+    var developerConfig = factory.createConfig(DeveloperConfig.class);
 
-    println(developerConfig)
+    System.out.println(developerConfig);
+
+    // Output:
+    // DeveloperConfig[
+    //     developerMode=false,
+    //     logLevel=INFO
+    // ]
 }
 ```
-
-> **Output:** DeveloperConfig(developerMode=false, logLevel=INFO)
 
 > **Note:** By default, the `value` parameter of `@DependsOn` is set to `True`, emulating a boolean-style comparison,
 > so technically the declaration of `@DependsOn.value` in the example above is redundant.
@@ -272,63 +269,68 @@ features useful for debugging).
 `Developer.properties`
 
 ```properties
-DeveloperMode = False
+DeveloperMode = false
 LogLevel = DEBUG
-ShowDebugOverlay = True
-BypassLogin = True
+ShowDebugOverlay = true
+BypassLogin = true
 RateLimit = 0
 ```
 
-`DeveloperConfig.kt`
+`DeveloperConfig.java`
 
-```kotlin
-//import java.lang.System.Logger.Level
-
-@ConfigFile("Developer.properties")
-data class DeveloperConfig(
-    @ConfigProperty("DeveloperMode")
-    val developerMode: Boolean,
+```java
+@ConfigFile(filename = "Developer.properties")
+public record DeveloperConfig(
+    @ConfigProperty(name = "DeveloperMode") boolean developerMode,
 
     @ConfigGroup
-    @DependsOn("DeveloperMode")
-    val dependentConfig: DependentConfig,
-)
+    @DependsOn(property = "DeveloperMode")
+    DependentConfig dependentConfig
+) {
+    public record DependentConfig(
+        @ConfigProperty(name = "LogLevel", defaultValue = "INFO")
+        System.Logger.Level logLevel,
 
-data class DependentConfig(
-    @ConfigProperty(name = "LogLevel", defaultValue = "INFO")
-    val logLevel: Level,
+        @ConfigProperty(name = "ShowDebugOverlay", defaultValue = "false")
+        boolean debugOverlay,
 
-    @ConfigProperty(name = "ShowDebugOverlay", defaultValue = "False")
-    val debugOverlay: Boolean,
+        @ConfigProperty(name = "BypassLogin", defaultValue = "false")
+        boolean bypassLogin,
 
-    @ConfigProperty(name = "BypassLogin", defaultValue = "False")
-    val bypassLogin: Boolean,
-
-    @ConfigProperty(name = "RateLimit", defaultValue = "127")
-    val rateLimit: Int,
-)
-```
-
-`Main.kt`
-
-```kotlin
-fun main() {
-    val factory = ConfigFactory("../configDirPath")
-    val developerConfig = factory.createConfig(DeveloperConfig::class.java)
-
-    println(developerConfig)
+        @ConfigProperty(name = "RateLimit", defaultValue = "127")
+        int rateLimit
+  ) {}
 }
 ```
 
-> **Output:** DeveloperConfig(developerMode=false, dependentConfig=DependentConfig(logLevel=INFO, debugOverlay=false,
-> bypassLogin=false, rateLimit=127))
+`Main.java`
+
+```java
+public static void main(String[] args) {
+    var factory = new ConfigFactory("../configDir");
+    var developerConfig = factory.createConfig(DeveloperConfig.class);
+
+    System.out.println(developerConfig);
+
+    // Output:
+    // DeveloperConfig[
+    //     developerMode=false,
+    //     dependentConfig=DependentConfig[
+    //         logLevel=INFO,
+    //         debugOverlay=false,
+    //         bypassLogin=false,
+    //         rateLimit=127
+    //     ]
+    // ]
+}
+```
 
 ---
 
 ## Configuration Namespaces
 
 It's not uncommon for different configurations to have a common structure. For example, plugins,
-services, features, etc. Using KConfig, such configurations can be represented by a single
+services, features, etc. Using JConfig, such configurations can be represented by a single
 configuration type we call a *Namespace*. A namespace is simply a `@ConfigGroup` with a specified name.
 
 ### Example
@@ -351,55 +353,55 @@ GameServer.WaterMarkLow = 64
 GameServer.WaterMarkHigh = 128
 ```
 
-`NetworkConfig.kt`
+`NetworkConfig.java`
 
-```kotlin
-@ConfigFile("Network.properties")
-data class NetworkConfig(
-    @ConfigGroup("LoginServer")
-    val login: ServerConfig,
-
-    @ConfigGroup("GameServer")
-    val game: ServerConfig,
-)
-
-data class ServerConfig(
-    @ConfigProperty("Host")
-    val host: String,
-
-    @ConfigProperty("Port")
-    val port: Int,
-
-    @ConfigProperty("AcceptorThreads")
-    val acceptorThreads: Int,
-
-    @ConfigProperty("WorkerThreads")
-    val workerThreads: Int,
-
-    @ConfigProperty("WaterMarkLow")
-    val watermarkLow: Int,
-
-    @ConfigProperty("WaterMarkHigh")
-    val watermarkHigh: Int,
-)
-```
-
-`Main.kt`
-
-```kotlin
-fun main() {
-    val factory = ConfigFactory("../configDirPath")
-    val networkConfig = factory.createConfig(NetworkConfig::class.java)
-
-    println(networkConfig)
+```java
+@ConfigFile(filename = "Network.properties")
+public record NetworkConfig(
+    @ConfigGroup(namespace = "LoginServer") ServerConfig login,
+    @ConfigGroup(namespace = "GameServer") ServerConfig game
+) {
+    public record ServerConfig(
+        @ConfigProperty(name = "Host") String host,
+        @ConfigProperty(name = "Port") int port,
+        @ConfigProperty(name = "AcceptorThreads") int acceptorThreads,
+        @ConfigProperty(name = "WorkerThreads") int workerThreads,
+        @ConfigProperty(name = "WaterMarkLow") int watermarkLow,
+        @ConfigProperty(name = "WaterMarkHigh") int watermarkHigh
+    ) {}
 }
 ```
 
-> **Output:**
->
-> NetworkConfig(login=ServerConfig(host=127.0.0.1, port=4460, acceptorThreads=1, workerThreads=0,
-> watermarkLow=32, watermarkHigh=64), game=ServerConfig(host=192.168.0.1, port=6543, acceptorThreads=1, workerThreads=0,
-> watermarkLow=64, watermarkHigh=128))
+`Main.java`
+
+```java
+public static void main(String[] args) {
+    var factory = new ConfigFactory("../configDir");
+    var networkConfig = factory.createConfig(NetworkConfig.class);
+
+    System.out.println(networkConfig);
+
+    // Output:
+    // NetworkConfig[
+    //     login=ServerConfig[
+    //         host=127.0.0.1,
+    //         port=4460,
+    //         acceptorThreads=1,
+    //         workerThreads=0,
+    //         watermarkLow=32,
+    //         watermarkHigh=64
+    //     ],
+    //     game=ServerConfig[
+    //         host=192.168.0.1,
+    //         port=6543,
+    //         acceptorThreads=1,
+    //         workerThreads=0,
+    //         watermarkLow=64,
+    //         watermarkHigh=128
+    //     ]
+    // ]
+}
+```
 
 > **Note:** The namespaces can also define `@DependsOn` and the same rules as for unnamed groups will apply.
 
@@ -421,131 +423,78 @@ we use to create its instance - `ConfigFactory.createConfigContainer`.
 
 ### Example
 
-`ConfigContainer.kt`
+`ConfigContainer.java`
 
-```kotlin
-data class ConfigContainer(
-    val database: DatabaseConfig,
-    val network: NetworkConfig,
-    val system: SystemConfig,
-    val developerConfig: DeveloperConfig,
-)
+```java
+public record ConfigContainer(
+    DatabaseConfig database,
+    NetworkConfig network,
+    SystemConfig system,
+    DeveloperConfig developer
+) {}
 ```
 
-`Main.kt`
+`Main.java`
 
-```kotlin
-fun main() {
-    val factory = ConfigFactory("../configDirPath")
-    val container = factory.createConfigContainer(ConfigContainer::class.java)
+```java
+public static void main(String[] args) {
+    var factory = new ConfigFactory("../configDir");
+    factory.addValueConverter(
+        DateTimeFormatter.class,
+        (type, typeArgs, value) -> DateTimeFormatter.ofPattern(value)
+    );
+    var config = factory.createConfigContainer(ConfigContainer.class);
 
-    println(container)
+    System.out.println(config);
+
+    // Output:
+    // ConfigContainer[
+    //     database=DatabaseConfig[
+    //         url=jdbc:mariadb://127.0.0.1:3306/test,
+    //         user=JConfig,
+    //         password=JConfig_Password,
+    //         poolSize=7,
+    //         nonExistent=false
+    //     ],
+    //     network=NetworkConfig[
+    //         login=ServerConfig[
+    //             host=127.0.0.1,
+    //             port=4460,
+    //             acceptorThreads=1,
+    //             workerThreads=0,
+    //             watermarkLow=32,
+    //             watermarkHigh=64
+    //         ],
+    //         game=ServerConfig[
+    //             host=192.168.0.1,
+    //             port=6543,
+    //             acceptorThreads=1,
+    //             workerThreads=0,
+    //             watermarkLow=64,
+    //             watermarkHigh=128
+    //         ]
+    //     ],
+    //     system=SystemConfig[
+    //         logTimestampFormatter=...,
+    //         retryDelay=5
+    //     ],
+    //     developer=DeveloperConfig[
+    //         developerMode=false,
+    //         dependentConfig=DependentConfig[
+    //             logLevel=INFO,
+    //             debugOverlay=false,
+    //             bypassLogin=false,
+    //             rateLimit=127
+    //         ]
+    //     ]
+    // ]
 }
 ```
-
-> **Output:** ConfigContainer(database=DatabaseConfig(...), network=NetworkConfig(...), system=SystemConfig(...),
-> developerConfig=DeveloperConfig(...))
 
 > **Note:** Instantiation of the configuration types is exactly the same as if they were instantiated one by one using
 > `ConfigFactory.createConfig`.
 
 ---
-
-## Java Compatibility
-
-KConfig is 100% compatible with Java - replace Kotlin's data classes with Java records, and you're ready to roll.
-
-### Example
-
-The following example is a compact version of all examples above.
-
-```java
-public class Example {
-    public record ConfigContainer(
-        DatabaseConfig database,
-        NetworkConfig network,
-        SystemConfig system,
-        DeveloperConfig developerConfig
-    ) {
-        @ConfigFile(name = "Database.properties")
-        public record DatabaseConfig(
-            @ConfigProperty(name = "URL") String url,
-            @ConfigProperty(name = "User") String user,
-            @ConfigProperty(name = "Password") String password,
-            @ConfigProperty(name = "PoolSize") int poolSize,
-
-            // When no such key exists in the properties file, a defaultValue is required
-            @ConfigProperty(name = "NonExistent", defaultValue = "False") boolean nonExistent
-        ) {
-        }
-
-        @ConfigFile(name = "System.properties")
-        public record SystemConfig(
-            @ConfigProperty(name = "LogTimestampFormat") DateTimeFormatter logTimestampFormat,
-            @ConfigProperty(name = "RetryDelay") long retryDelay
-        ) {
-        }
-
-        @ConfigFile(name = "Network.properties")
-        public record NetworkConfig(
-            @ConfigGroup(namespace = "LoginServer") ServerConfig login,
-            @ConfigGroup(namespace = "GameServer") ServerConfig game
-        ) {
-            public record ServerConfig(
-                @ConfigProperty(name = "Host") String host,
-                @ConfigProperty(name = "Port") int port,
-                @ConfigProperty(name = "AcceptorThreads") int acceptorThreads,
-                @ConfigProperty(name = "WorkerThreads") int workerThreads,
-                @ConfigProperty(name = "WaterMarkLow") int watermarkLow,
-                @ConfigProperty(name = "WaterMarkHigh") int watermarkHigh
-            ) {
-            }
-        }
-
-        @ConfigFile(name = "Developer.properties")
-        public record DeveloperConfig(
-            @ConfigProperty(name = "DeveloperMode") boolean developerMode,
-
-            @ConfigGroup
-            @DependsOn(property = "DeveloperMode")
-            DependentConfig dependentConfig
-        ) {
-            public record DependentConfig(
-                @ConfigProperty(name = "LogLevel", defaultValue = "INFO") System.Logger.Level logLevel,
-                @ConfigProperty(name = "ShowDebugOverlay", defaultValue = "False") boolean debugOverlay,
-                @ConfigProperty(name = "BypassLogin", defaultValue = "False") boolean bypassLogin,
-                @ConfigProperty(name = "RateLimit", defaultValue = "127") int rateLimit
-            ) {
-            }
-        }
-    }
-
-    public static void main(String[] args) {
-        var factory = new ConfigFactory("../configDirPath");
-        factory.addValueConverter(
-            DateTimeFormatter.class,
-            (value, type, typeArgs) -> DateTimeFormatter.ofPattern(value)
-        );
-        factory.addValueConverter(long.class, (value, type, typeArgs) -> Long.parseLong(value) * 1000);
-
-        var database = factory.createConfig(ConfigContainer.DatabaseConfig.class);
-        System.out.println(database);
-
-        var systemConfig = factory.createConfig(ConfigContainer.SystemConfig.class);
-        System.out.println(LocalDateTime.now().format(systemConfig.logTimestampFormat));
-        System.out.println(systemConfig.retryDelay);
-
-        var developer =  factory.createConfig(ConfigContainer.DeveloperConfig.class);
-        System.out.println(developer);
-
-        var network = factory.createConfig(ConfigContainer.NetworkConfig.class);
-        System.out.println(network);
-
-        var container = factory.createConfigContainer(ConfigContainer.class);
-        System.out.println(container);
-    }
-}
-```
 
 ## License
 
