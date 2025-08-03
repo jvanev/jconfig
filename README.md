@@ -81,7 +81,7 @@ public static void main(String[] args) {
 > for that property. If the conversion mechanism can successfully produce a valid value from an empty string
 > (e.g., an empty list for a List<T> type, or an empty map for a Map<K, V> type), then you are not required
 > to provide an explicit `defaultValue`. However, if an empty string cannot be converted to the required type
-> (as is the case for `Boolean` or `Int`), an exception will be thrown, highlighting the need for an explicit
+> (as is the case for `boolean` or `int`), an exception will be thrown, highlighting the need for an explicit
 > `defaultValue` like for `NonExistent` in the example above.
 
 ---
@@ -91,21 +91,20 @@ public static void main(String[] args) {
 The configuration factory provides support for converting `String` values to several
 common types by default:
 
-- **Primitive types** - `Byte`, `Short`, `Int`, `Long`, `Float`, `Double`, `Boolean`, `Char`
-- **Primitive arrays** - `ByteArray`, `ShortArray`, `IntArray`, `LongArray`, `FloatArray`, `DoubleArray`,
-  `BooleanArray`, `CharArray`
+- **Primitive types** - `byte`, `short`, `int`, `long`, `float`, `double`, `boolean`, `char`
+- **Primitive arrays** - `byte[]`, `short[]`, `int[]`, `long[]`, `float[]`, `double[]`, `boolean[]`, `char[]`
 - **Enumerations** - Any `Enum` type, by matching the string value to an enum entry's name.
 - **Reference Types with `valueOf(String)`:** Any class that provides a public, static `valueOf(String)` method
   (e.g., `java.math.BigDecimal`, `java.util.UUID`). The return type of this method must be assignable
   to the target type.
-- **Collections:** `Collection`, `List`, `Set`. Elements within the collection are also converted recursively based on
-  their generic type argument (e.g., `List<Int>` will convert string "1,2,3" into a list of integers).
+- **Collections:** `List` and `Set`. Elements within the collection are also converted recursively based on
+  their generic type argument (e.g., `List<Integer>` will convert string "1,2,3" into a list of integers).
 - **Maps:** For `Map<K, V>`, both keys and values are converted recursively based on their generic type arguments
-  (e.g., `Map<String, Int>` will convert "key1=1,key2=2" into a map with string keys and integer values).
+  (e.g., `Map<String, Integer>` will convert "key1=1,key2=2" into a map with string keys and integer values).
 
 When the type of the configuration property is:
 
-- `Collection` or `List` - An `ArrayList` will be used for its initialization (through `mutableListOf`)
+- `List` - An `ArrayList` will be used for its initialization
 - `Set` - A `LinkedHashSet` will be used for its initialization
 - `Map` - A `LinkedHashMap` will be used for its initialization
 
@@ -245,7 +244,7 @@ public static void main(String[] args) {
 }
 ```
 
-> **Note:** By default, the `value` parameter of `@DependsOn` is set to `True`, emulating a boolean-style comparison,
+> **Note:** By default, the `value` parameter of `@DependsOn` is set to `true`, emulating a boolean-style comparison,
 > so technically the declaration of `@DependsOn.value` in the example above is redundant.
 
 > **Note 2:** A **case-sensitive string comparison** is performed to determine whether
