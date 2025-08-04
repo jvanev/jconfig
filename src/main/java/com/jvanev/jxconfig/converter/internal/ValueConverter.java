@@ -22,6 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -78,7 +79,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * conversion provided by this class will be skipped, and your custom converter will be invoked instead.
  */
 public final class ValueConverter {
-    private final Map<Class<?>, IValueConverter> converters = new ConcurrentHashMap<>();
+    private final Map<Class<?>, IValueConverter> converters = new LinkedHashMap<>();
 
     /**
      * A cache of references to static valueOf methods mapped to their declaring type.
