@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 /**
  * Provides methods for working with aggregate types (e.g., arrays and collections).
@@ -48,12 +49,12 @@ final class AggregateTypeUtil {
     /**
      * Regex to split strings by commas (e.g., 1, 2, 3). Any space around the comma will be trimmed.
      */
-    private static final String ARRAY_SPLIT_REGEX = "\\s*,\\s*";
+    private static final Pattern ARRAY_SPLIT_REGEX = Pattern.compile("\\s*,\\s*");
 
     /**
      * Regex to split strings by colons (e.g., Key:Value). Any space around the colon will be trimmed.
      */
-    private static final String KEY_VALUE_SPLIT_REGEX = "\\s*:\\s*";
+    private static final Pattern KEY_VALUE_SPLIT_REGEX = Pattern.compile("\\s*:\\s*");
 
     // Utility class
     private AggregateTypeUtil() {
@@ -91,7 +92,7 @@ final class AggregateTypeUtil {
      * @return The value converted into a primitive array of the component type.
      */
     private static Object convertToPrimitiveArray(Class<?> componentType, String value) {
-        String[] entries = value.isBlank() ? new String[0] : value.split(ARRAY_SPLIT_REGEX);
+        String[] entries = value.isBlank() ? new String[0] : ARRAY_SPLIT_REGEX.split(value);
         Object array = Array.newInstance(componentType, entries.length);
 
         for (int i = 0; i < entries.length; i++) {
@@ -133,7 +134,7 @@ final class AggregateTypeUtil {
             );
         }
 
-        String[] entries = value.isBlank() ? new String[0] : value.split(ARRAY_SPLIT_REGEX);
+        String[] entries = value.isBlank() ? new String[0] : ARRAY_SPLIT_REGEX.split(value);
         Collection<Object> collection = type == List.class
             ? new ArrayList<>(entries.length)
             : new LinkedHashSet<>(entries.length);
@@ -167,7 +168,7 @@ final class AggregateTypeUtil {
      * @throws IllegalArgumentException If the value contains malformed tokens.
      */
     static Map<Object, Object> toMap(ValueConverter converter, Type keyType, Type valueType, String value) {
-        var entries = value.isBlank() ? new String[0] : value.split(ARRAY_SPLIT_REGEX);
+        var entries = value.isBlank() ? new String[0] : ARRAY_SPLIT_REGEX.split(value);
         var map = new LinkedHashMap<>();
 
         for (var entry : entries) {
@@ -175,7 +176,7 @@ final class AggregateTypeUtil {
                 continue;
             }
 
-            var pair = entry.split(KEY_VALUE_SPLIT_REGEX);
+            var pair = KEY_VALUE_SPLIT_REGEX.split(entry);
 
             if (pair.length != 2) {
                 throw new IllegalArgumentException("Maps support only key:value pairs, " + entry + " given");
