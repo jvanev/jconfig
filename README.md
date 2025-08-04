@@ -1,4 +1,4 @@
-# JConfig
+# JXConfig
 
 A lightweight, declarative configuration factory for Java. Provides type-safety, effortless conditional
 value resolution, grouping, namespaces, and a flexible value conversion mechanism.
@@ -36,8 +36,8 @@ The most basic usage of this factory requires two steps:
 
 ```properties
 URL = jdbc:mariadb://127.0.0.1:3306/test
-User = JConfig
-Password = JConfig_Password
+User = JXConfig
+Password = JXConfig_Password
 PoolSize = 7
 ```
 
@@ -68,8 +68,8 @@ public static void main(String[] args) {
     // Output:
     // DatabaseConfig[
     //     url=jdbc:mariadb://127.0.0.1:3306/test,
-    //     user=JConfig,
-    //     password=JConfig_Password,
+    //     user=JXConfig,
+    //     password=JXConfig_Password,
     //     poolSize=7,
     //     nonExistent=false
     // ]
@@ -77,7 +77,7 @@ public static void main(String[] args) {
 ```
 
 > **Note:** If a configuration property is not found in the properties file and no explicit defaultValue
-> is set within its `@ConfigProperty` annotation, JConfig will attempt to convert an empty string ("")
+> is set within its `@ConfigProperty` annotation, JXConfig will attempt to convert an empty string ("")
 > for that property. If the conversion mechanism can successfully produce a valid value from an empty string
 > (e.g., an empty list for a `List<T>` type, or an empty map for a `Map<K, V>` type), then you are not required
 > to provide an explicit `defaultValue`. However, if an empty string cannot be converted to the required type
@@ -201,8 +201,8 @@ It's not uncommon for a configuration value to depend on another configuration v
 the `LogLevel` should be set to `DEBUG` only in developer mode, or fall back to `INFO` otherwise. Usually,
 such setup involves `if` statements determining the value at runtime.
 
-JConfig offers another approach - Configuration Dependencies. Declaratively describe the relationships between
-dependent properties, and JConfig will resolve the final runtime values for you.
+JXConfig offers another approach - Configuration Dependencies. Declaratively describe the relationships between
+dependent properties, and JXConfig will resolve the final runtime values for you.
 
 If the value of the dependency matches the required value, the dependent property will be initialized with the
 value from the configuration file; otherwise, its `@ConfigProperty.defaultValue` will be used.
@@ -331,7 +331,7 @@ public static void main(String[] args) {
 ## Configuration Namespaces
 
 It's not uncommon for different configurations to have a common structure. For example, plugins,
-services, features, etc. Using JConfig, such configurations can be represented by a single
+services, features, etc. Using JXConfig, such configurations can be represented by a single
 configuration type we call a *Namespace*. A namespace is simply a `@ConfigGroup` with a specified name.
 
 ### Example
@@ -452,8 +452,8 @@ public static void main(String[] args) {
     // ConfigContainer[
     //     database=DatabaseConfig[
     //         url=jdbc:mariadb://127.0.0.1:3306/test,
-    //         user=JConfig,
-    //         password=JConfig_Password,
+    //         user=JXConfig,
+    //         password=JXConfig_Password,
     //         poolSize=7,
     //         nonExistent=false
     //     ],

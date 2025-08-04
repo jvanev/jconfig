@@ -5,16 +5,16 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.jvanev</groupId>
-    <artifactId>jconfig</artifactId>
-    <version>0.0.0</version>
+    <artifactId>jxconfig</artifactId>
+    <version>0.1.0</version>
 
-    <name>JConfig</name>
+    <name>JXConfig</name>
     <description>
         Lightweight, declarative configuration factory for Java. Provides type-safe access,
         effortless conditional value resolution, and flexible value conversion with support
         for grouping and namespaces.
     </description>
-    <url>https://github.com/jvanev/jconfig</url>
+    <url>https://github.com/jvanev/jxconfig</url>
 
     <licenses>
         <license>
