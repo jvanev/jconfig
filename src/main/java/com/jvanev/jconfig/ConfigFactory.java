@@ -235,7 +235,8 @@ public final class ConfigFactory {
                 } catch (Exception e) {
                     throw new ValueConversionException(
                         "Failed to convert the resolved value for configuration property %s (%s.%s)"
-                            .formatted(property.name(), type.getSimpleName(), parameter.getName())
+                            .formatted(property.name(), type.getSimpleName(), parameter.getName()),
+                        e
                     );
                 }
             }
@@ -252,7 +253,7 @@ public final class ConfigFactory {
      * @param isDependencySatisfied Whether the dependency conditions for the current context
      *                              and all of its parents are satisfied
      */
-    record BuildContext(Properties properties, String namespace, boolean isDependencySatisfied) {
+    private record BuildContext(Properties properties, String namespace, boolean isDependencySatisfied) {
         /**
          * Returns a new context based on this context and the specified arguments.
          *

@@ -52,7 +52,7 @@ public record DatabaseConfig(
     @ConfigProperty(name = "PoolSize") int poolSize,
 
     // When no such key exists in the properties file, a defaultValue is required
-    @ConfigProperty(name = "NonExistent", defaultValue = "False") boolean nonExistent
+    @ConfigProperty(name = "NonExistent", defaultValue = "false") boolean nonExistent
 ) {}
 ```
 
@@ -79,7 +79,7 @@ public static void main(String[] args) {
 > **Note:** If a configuration property is not found in the properties file and no explicit defaultValue
 > is set within its `@ConfigProperty` annotation, JConfig will attempt to convert an empty string ("")
 > for that property. If the conversion mechanism can successfully produce a valid value from an empty string
-> (e.g., an empty list for a List<T> type, or an empty map for a Map<K, V> type), then you are not required
+> (e.g., an empty list for a `List<T>` type, or an empty map for a `Map<K, V>` type), then you are not required
 > to provide an explicit `defaultValue`. However, if an empty string cannot be converted to the required type
 > (as is the case for `boolean` or `int`), an exception will be thrown, highlighting the need for an explicit
 > `defaultValue` like for `NonExistent` in the example above.
@@ -94,9 +94,8 @@ common types by default:
 - **Primitive types** - `byte`, `short`, `int`, `long`, `float`, `double`, `boolean`, `char`
 - **Primitive arrays** - `byte[]`, `short[]`, `int[]`, `long[]`, `float[]`, `double[]`, `boolean[]`, `char[]`
 - **Enumerations** - Any `Enum` type, by matching the string value to an enum entry's name.
-- **Reference Types with `valueOf(String)`:** Any class that provides a public, static `valueOf(String)` method
-  (e.g., `java.math.BigDecimal`, `java.util.UUID`). The return type of this method must be assignable
-  to the target type.
+- **Reference Types with `valueOf(String)`:** Any class that provides a public, static `valueOf(String)` method.
+  The return type of this method must be assignable to the target type.
 - **Collections:** `List` and `Set`. Elements within the collection are also converted recursively based on
   their generic type argument (e.g., `List<Integer>` will convert string "1,2,3" into a list of integers).
 - **Maps:** For `Map<K, V>`, both keys and values are converted recursively based on their generic type arguments
@@ -153,9 +152,12 @@ public static void main(String[] args) {
 #### Custom Converters and Overriding Behavior
 
 Using `addValueConverter` has an important side effect - Custom value converters take precedence
-over the default conversion mechanism. While adding support for additional types doesn't change the
-default behavior, adding a custom converter for an already supported type effectively overrides
-the default conversion mechanism for this type.
+over the default conversion mechanism for direct target matches. While adding support for additional
+types doesn't change the default behavior, adding a custom converter for an already supported type
+effectively overrides the default conversion mechanism for this type.
+
+If no converter matches the target type directly, the custom converters will be reviewed to check
+if there is a converter that can produce an assignable value, as a last resort.
 
 #### Example
 

@@ -48,12 +48,16 @@ final class AggregateTypeUtil {
     /**
      * Regex to split strings by commas (e.g., 1, 2, 3). Any space around the comma will be trimmed.
      */
-    static final String ARRAY_SPLIT_REGEX = "\\s*,\\s*";
+    private static final String ARRAY_SPLIT_REGEX = "\\s*,\\s*";
 
     /**
      * Regex to split strings by colons (e.g., Key:Value). Any space around the colon will be trimmed.
      */
-    static final String KEY_VALUE_SPLIT_REGEX = "\\s*:\\s*";
+    private static final String KEY_VALUE_SPLIT_REGEX = "\\s*:\\s*";
+
+    // Utility class
+    private AggregateTypeUtil() {
+    }
 
     /**
      * Determines if the specified type represents an array of primitive type.

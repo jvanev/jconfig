@@ -21,13 +21,11 @@ import com.jvanev.jconfig.exception.ValueConversionException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -51,8 +49,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *     </li>
  *     <li>
  *         <b>Reference Types with {@code valueOf(String)}:</b> Any class that provides a public,
- *         static <b>valueOf(String)</b> method (e.g., {@link BigDecimal}, {@link UUID}).
- *         The return type of this method must be assignable to the target type.
+ *         static <b>valueOf(String)</b> method. The return type of this method must be assignable to the target type.
  *     </li>
  *     <li>
  *         <b>Collections:</b> {@link List} and {@link Set}. Elements within the collection are also converted
@@ -71,9 +68,12 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <h3>Custom Converters and Overriding Behavior:</h3>
  * Additional type conversion support can be seamlessly integrated using the {@link #addValueConverter} method.
- * Custom converters registered via this method take precedence over the default conversion logic.
- * This allows you to override existing behaviors or introduce support for new, complex types.
+ * Custom converters registered via this method take precedence over the default conversion logic
+ * for direct matches. If the newly registered converter's supported type doesn't match the target
+ * type directly, a more specific conversion mechanism will be looked up first; if no direct match exists
+ * the converters register will be reviewed for a converter that can provide an assignable value.
  * <p>
+ * This allows you to override existing behaviors or introduce support for new, complex types.
  * For instance, if you register a converter for {@code int.class}, the default string-to-integer
  * conversion provided by this class will be skipped, and your custom converter will be invoked instead.
  */
@@ -81,7 +81,9 @@ public final class ValueConverter {
     private final Map<Class<?>, IValueConverter> converters = new ConcurrentHashMap<>();
 
     /**
-     * A cache of valueOf methods mapped to the type they produce.
+     * A cache of references to static valueOf methods mapped to their declaring type.
+     * It might contain a key with {@code null} value, which implies that the type was
+     * already checked and no static valueOf method was found.
      */
     private final Map<Class<?>, ValueOfMethod> valueOfMethods = new ConcurrentHashMap<>();
 

@@ -19,6 +19,10 @@ package com.jvanev.jconfig.converter.internal;
  * Provides methods for working with reference types.
  */
 final class ReferenceTypeUtil {
+    // Utility class
+    private ReferenceTypeUtil() {
+    }
+
     /**
      * Determines if this type represents a [String] object.
      */

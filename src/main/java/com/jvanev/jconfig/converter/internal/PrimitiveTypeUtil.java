@@ -65,6 +65,10 @@ final class PrimitiveTypeUtil {
         CONVERTERS.put(Character.class, charConverter);
     }
 
+    // Utility class
+    private PrimitiveTypeUtil() {
+    }
+
     /**
      * Determines if this type represents a boxed primitive object.
      */

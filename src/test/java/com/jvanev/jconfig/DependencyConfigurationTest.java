@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class DependencyConfigurationTest {
+class DependencyConfigurationTest {
     private final String TEST_RESOURCES_DIR = System.getProperty("user.dir") + "/src/test/resources/";
 
     private final ConfigFactory factory = new ConfigFactory(TEST_RESOURCES_DIR + "config");

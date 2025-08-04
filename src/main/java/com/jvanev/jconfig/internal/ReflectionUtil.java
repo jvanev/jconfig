@@ -25,6 +25,10 @@ import java.lang.reflect.Parameter;
  * Provides a set of convenience methods for working with Java reflection.
  */
 public final class ReflectionUtil {
+    // Utility class
+    private ReflectionUtil() {
+    }
+
     /**
      * Returns the {@link ConfigProperty} annotation of the specified parameter.
      *

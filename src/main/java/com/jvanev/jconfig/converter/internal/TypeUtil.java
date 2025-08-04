@@ -23,6 +23,10 @@ import java.lang.reflect.Type;
  * Provides methods for easier access to type information.
  */
 final class TypeUtil {
+    // Utility class
+    private TypeUtil() {
+    }
+
     /**
      * Returns the class of the specified type.
      *
