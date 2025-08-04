@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ConfigValueConversionTest {
     private final String TEST_RESOURCES_DIR = System.getProperty("user.dir") + "/src/test/resources/";
 
-    private final ConfigFactory factory = new ConfigFactory(TEST_RESOURCES_DIR + "config");
+    private final ConfigFactory factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config").build();
 
     @BeforeEach
     void ensureTestConfigurationDirectoryExists() {
@@ -189,11 +189,12 @@ class ConfigValueConversionTest {
 
         @Test
         void onAddedSupporter_ShouldSupportCustomReferenceType() {
-            var factory = new ConfigFactory(TEST_RESOURCES_DIR + "config");
-            factory.addValueConverter(
-                DateTimeFormatter.class,
-                (type, typeArguments, value) -> DateTimeFormatter.ofPattern(value)
-            );
+            var factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config")
+                .withConverter(
+                    DateTimeFormatter.class,
+                    (type, typeArguments, value) -> DateTimeFormatter.ofPattern(value)
+                )
+                .build();
 
             assertDoesNotThrow(() -> {
                 factory.createConfig(DateTimeFormatterConfigurationParameter.class);
@@ -202,13 +203,12 @@ class ConfigValueConversionTest {
 
         @Test
         void onAddedSupporter_ShouldContainUsableCustomReferenceType() {
-            var factory = new ConfigFactory(TEST_RESOURCES_DIR + "config");
-            factory
-                .addValueConverter(
+            var factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config")
+                .withConverter(
                     DateTimeFormatter.class,
                     (type, typeArguments, value) -> DateTimeFormatter.ofPattern(value)
                 )
-                .addValueConverter(
+                .withConverter(
                     URL.class,
                     (type, typeArguments, value) -> {
                         try {
@@ -217,7 +217,8 @@ class ConfigValueConversionTest {
                             throw new RuntimeException(e);
                         }
                     }
-                );
+                )
+                .build();
 
             var config = factory.createConfig(DateTimeFormatterConfigurationParameter.class);
             var dateTime = LocalDateTime.of(2025, 7, 5, 13, 17);

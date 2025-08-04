@@ -13,7 +13,7 @@ Requires Java 17 or newer.
 
 ## Features
 
-- Minimal API surface - 3 core methods and 4 annotations
+- Minimal API surface
 - Declarative configuration types - Describe your configurations and let the factory do the work for you
 - Extensible value conversion mechanism - Add your own value converter if the defaults are not enough
 - Configuration dependencies - Get rid of the `if` statements for individual dependent configuration
@@ -60,7 +60,7 @@ public record DatabaseConfig(
 
 ```java
 public static void main(String[] args) {
-    var factory = new ConfigFactory("../configDir");
+    var factory = ConfigFactory.builder("../configDir").build();
     var dbConfig = factory.createConfig(DatabaseConfig.class);
 
     System.out.println(dbConfig);
@@ -136,11 +136,12 @@ public record SystemConfig(
 
 ```java
 public static void main(String[] args) {
-    var factory = new ConfigFactory("../configDir");
-    factory.addValueConverter(
-        DateTimeFormatter.class,
-        (type, typeArgs, value) -> DateTimeFormatter.ofPattern(value)
-    );
+    var factory = ConfigFactory.builder("../configDir")
+        .withConverter(
+            DateTimeFormatter.class,
+            (type, typeArgs, value) -> DateTimeFormatter.ofPattern(value)
+        )
+        .build();
     var systemConfig = factory.createConfig(SystemConfig.class);
 
     System.out.println(LocalDateTime.parse("2025-08-03T10:15:30").format(systemConfig.logTimestampFormatter()));
@@ -151,10 +152,10 @@ public static void main(String[] args) {
 
 #### Custom Converters and Overriding Behavior
 
-Using `addValueConverter` has an important side effect - Custom value converters take precedence
-over the default conversion mechanism for direct target matches. While adding support for additional
-types doesn't change the default behavior, adding a custom converter for an already supported type
-effectively overrides the default conversion mechanism for this type.
+Registering a custom converter using `withConverter` has an important side effect - Custom value
+converters take precedence over the default conversion mechanism for direct target matches.
+While adding support for additional types doesn't change the default behavior, adding a custom
+converter for an already supported type effectively overrides the default conversion mechanism for this type.
 
 If no converter matches the target type directly, the custom converters will be reviewed to check
 if there is a converter that can produce an assignable value, as a last resort.
@@ -180,11 +181,12 @@ public record SystemConfig(
 
 ```java
 public static void main(String[] args) {
-    var factory = new ConfigFactory("../configDir");
-    factory.addValueConverter(
-        long.class,
-        (type, typeArgs, value) -> Long.parseLong(value) * 1000
-    );
+    var factory = ConfigFactory.builder("../configDir")
+        .withConverter(
+            long.class,
+            (type, typeArgs, value) -> Long.parseLong(value) * 1000
+        )
+        .build();
     var systemConfig = factory.createConfig(SystemConfig.class);
 
     System.out.println(systemConfig.retryDelay());
@@ -233,7 +235,7 @@ public record DeveloperConfig(
 
 ```java
 public static void main(String[] args) {
-    var factory = new ConfigFactory("../configDir");
+    var factory = ConfigFactory.builder("../configDir").build();
     var developerConfig = factory.createConfig(DeveloperConfig.class);
 
     System.out.println(developerConfig);
@@ -308,7 +310,7 @@ public record DeveloperConfig(
 
 ```java
 public static void main(String[] args) {
-    var factory = new ConfigFactory("../configDir");
+    var factory = ConfigFactory.builder("../configDir").build();
     var developerConfig = factory.createConfig(DeveloperConfig.class);
 
     System.out.println(developerConfig);
@@ -377,7 +379,7 @@ public record NetworkConfig(
 
 ```java
 public static void main(String[] args) {
-    var factory = new ConfigFactory("../configDir");
+    var factory = ConfigFactory.builder("../configDir").build();
     var networkConfig = factory.createConfig(NetworkConfig.class);
 
     System.out.println(networkConfig);
@@ -439,11 +441,12 @@ public record ConfigContainer(
 
 ```java
 public static void main(String[] args) {
-    var factory = new ConfigFactory("../configDir");
-    factory.addValueConverter(
-        DateTimeFormatter.class,
-        (type, typeArgs, value) -> DateTimeFormatter.ofPattern(value)
-    );
+    var factory = ConfigFactory.builder("../configDir")
+        .withConverter(
+            DateTimeFormatter.class,
+            (type, typeArgs, value) -> DateTimeFormatter.ofPattern(value)
+        )
+        .build();
     var config = factory.createConfigContainer(ConfigContainer.class);
 
     System.out.println(config);

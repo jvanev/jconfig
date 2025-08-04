@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ConfigurationContainerFactoryTest {
     private static final String TEST_RESOURCES_DIR = System.getProperty("user.dir") + "/src/test/resources/";
 
-    private final ConfigFactory factory = new ConfigFactory(TEST_RESOURCES_DIR + "config");
+    private final ConfigFactory factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config").build();
 
     @BeforeEach
     void ensureTestConfigurationDirectoryExists() {

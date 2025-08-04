@@ -29,6 +29,8 @@ import java.lang.reflect.Parameter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -41,35 +43,25 @@ import java.util.Properties;
  * default values, and value resolution.
  */
 public final class ConfigFactory {
-    private final Path configDir;
+    private final Path configurationDirectory;
 
     private final ValueConverter converter;
 
-    /**
-     * Creates a new ConfigFactory.
-     *
-     * @param configDir The configuration directory where the {@code .properties} configuration files are located
-     */
-    public ConfigFactory(String configDir) {
-        this.configDir = Path.of(configDir);
+    // Instances of the factory are obtained through the dedicated builder
+    private ConfigFactory(String configurationDirectory) {
+        this.configurationDirectory = Path.of(configurationDirectory);
         this.converter = new ValueConverter();
     }
 
     /**
-     * Registers a custom value converter for converting {@link String} values to a specific type not natively
-     * supported by the factory's default mechanism, or to override the default conversion behavior for this type.
-     * <p>
-     * Custom converters take precedence over the built-in conversion logic.
+     * Adds the specified converter to the value conversion mechanism
+     * as a primary converter for values of the specified type.
      *
      * @param type      The type of values the converter supports
      * @param converter The converter for the specified type
-     *
-     * @return This factory's instance.
      */
-    public ConfigFactory addValueConverter(Class<?> type, IValueConverter converter) {
+    private void addValueConverter(Class<?> type, IValueConverter converter) {
         this.converter.addValueConverter(type, converter);
-
-        return this;
     }
 
     /**
@@ -275,7 +267,7 @@ public final class ConfigFactory {
 
     /**
      * Loads and returns a {@link Properties} object populated with the contents of the file with the specified name.
-     * The file is expected to be located within the {@link #configDir} directory.
+     * The file is expected to be located within the {@link #configurationDirectory} directory.
      *
      * @param filename The name of the configuration file, including its extension (e.g., {@code Network.properties}).
      *
@@ -286,10 +278,72 @@ public final class ConfigFactory {
     private Properties getProperties(String filename) throws IOException {
         var properties = new Properties();
 
-        try (var file = Files.newInputStream(configDir.resolve(filename))) {
+        try (var file = Files.newInputStream(configurationDirectory.resolve(filename))) {
             properties.load(file);
         }
 
         return properties;
+    }
+
+    /**
+     * Returns a new builder object responsible for building a new instance of {@link ConfigFactory}.
+     *
+     * @param configurationDirectory The directory where the {@code .properties} configuration files are located
+     *
+     * @return A new {@link Builder} of {@link ConfigFactory}.
+     */
+    public static Builder builder(String configurationDirectory) {
+        return new Builder(configurationDirectory);
+    }
+
+    /**
+     * This class is responsible for building immutable instances of {@link ConfigFactory}.
+     */
+    public static class Builder {
+        private final String configurationDirectory;
+
+        private final Map<Class<?>, IValueConverter> converters;
+
+        // Instantiable by the builder method only
+        private Builder(String configurationDirectory) {
+            this.configurationDirectory = configurationDirectory;
+            this.converters = new LinkedHashMap<>();
+        }
+
+        /**
+         * Registers a custom value converter for converting {@link String} values to a specific type not natively
+         * supported by the factory's default mechanism, or to override the default conversion behavior for this type.
+         * <p>
+         * Custom converters take precedence over the built-in conversion logic for exact matches of the specified type.
+         *
+         * @param type      The type of values the converter supports
+         * @param converter The converter for the specified type
+         *
+         * @return This builder.
+         */
+        public Builder withConverter(Class<?> type, IValueConverter converter) {
+            if (converters.containsKey(type)) {
+                throw new IllegalArgumentException("Duplicate converter found for type " + type.getSimpleName());
+            }
+
+            converters.put(type, converter);
+
+            return this;
+        }
+
+        /**
+         * Builds a new instance of {@link ConfigFactory} set up in the context of this builder.
+         *
+         * @return The fully initialized {@link ConfigFactory} object.
+         */
+        public ConfigFactory build() {
+            var factory = new ConfigFactory(configurationDirectory);
+
+            for (var set : converters.entrySet()) {
+                factory.addValueConverter(set.getKey(), set.getValue());
+            }
+
+            return factory;
+        }
     }
 }
