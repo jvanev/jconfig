@@ -15,13 +15,17 @@
  */
 package com.jvanev.jxconfig.converter.internal;
 
+import com.jvanev.jxconfig.exception.UnsupportedTypeConversionException;
 import com.jvanev.jxconfig.exception.ValueConversionException;
+import java.math.BigInteger;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -68,6 +72,10 @@ class ValueConverterTest {
 
     @Test
     void shouldConvertToPrimitiveArrays() {
+        var emptyValue = "";
+        var expectedEmptyIntArray = new int[0];
+        assertArrayEquals(expectedEmptyIntArray, (int[]) converter.convert(int[].class, emptyValue));
+
         var intValues = "1, 2, 0x03, #4";
         var expectedIntArray = new int[]{1, 2, 3, 4};
         assertArrayEquals(expectedIntArray, (int[]) converter.convert(int[].class, intValues));
@@ -118,6 +126,7 @@ class ValueConverterTest {
         List<Integer> list;
         Map<String, Integer> map;
         Stack<Integer> stack;
+        Map<BigInteger, Integer> unsupportedTypeArg;
     }
 
     static class Stack<T> {
@@ -150,7 +159,7 @@ class ValueConverterTest {
 
     @Test
     void shouldConvertToMap() throws NoSuchFieldException {
-        var entries = "Skill1: 7200, Skill2 :3600, Skill3 : 1800, Skill4:900";
+        var entries = "Skill1: 7200, Skill2 :3600, Skill3 : 1800, , Skill4:900";
         var type = ExampleType.class.getDeclaredField("map").getGenericType();
         var expectedResult = new LinkedHashMap<String, Integer>();
 
@@ -161,14 +170,6 @@ class ValueConverterTest {
 
         assertEquals(expectedResult, converter.convert(type, entries));
         assertEquals(Map.of(), converter.convert(type, ""));
-    }
-
-    @Test
-    void shouldThrowOnMalformedMapEntries() throws NoSuchFieldException {
-        var type = ExampleType.class.getDeclaredField("map").getGenericType();
-
-        assertThrows(IllegalArgumentException.class, () -> converter.convert(type, "Skill1 ; 7200"));
-        assertThrows(IllegalArgumentException.class, () -> converter.convert(type, "Skill1, : 7200"));
     }
 
     @Test
@@ -222,30 +223,117 @@ class ValueConverterTest {
         assertEquals(LogLevel.INFO, converter.convert(LogLevel.class, info));
     }
 
-    public record TestType(int value) {
-        public static TestType valueOf(String value) {
-            return new TestType(Integer.parseInt(value));
+    @Nested
+    class UnsupportedConversionTests {
+        static class TypeHolder<T> {
+            T typeVariableField;
+        }
+
+        @Test
+        void shouldThrowOnUnsupportedType() throws NoSuchFieldException {
+            var field = TypeHolder.class.getDeclaredField("typeVariableField");
+            var typeVariable = field.getGenericType();
+
+            assertThrows(
+                UnsupportedTypeConversionException.class,
+                () -> converter.convert(typeVariable, "test")
+            );
+        }
+
+        @Test
+        void shouldThrowOnUnsupportedPrimitiveType() {
+            assertThrows(
+                IllegalArgumentException.class,
+                () -> PrimitiveTypeUtil.toPrimitive(Map.class, "1")
+            );
+        }
+
+        @Test
+        void shouldThrowOnUnsupportedCollectionType() {
+            assertThrows(
+                UnsupportedTypeConversionException.class,
+                () -> AggregateTypeUtil.toCollection(converter, Map.class, int.class, "")
+            );
+        }
+
+        @Test
+        void shouldThrowOnMalformedMapEntries() throws NoSuchFieldException {
+            var type = ExampleType.class.getDeclaredField("map").getGenericType();
+
+            assertThrows(IllegalArgumentException.class, () -> converter.convert(type, "Skill1 ; 7200"));
+            assertThrows(IllegalArgumentException.class, () -> converter.convert(type, "Skill1, : 7200"));
+        }
+
+        @Test
+        void shouldThrowOnUnsupportedMapTypeArgument() throws NoSuchFieldException {
+            var type = ExampleType.class.getDeclaredField("unsupportedTypeArg").getGenericType();
+
+            assertThrows(IllegalArgumentException.class, () -> converter.convert(type, "Skill1 : 7200"));
         }
     }
 
-    @Test
-    void shouldConvertTypesWithValueOfMethod() {
-        var value = "127";
-
-        assertEquals(new TestType(127), converter.convert(TestType.class, value));
-    }
-
-    public record TestTypeWithThrowingValueOf(int value) {
-        public static TestTypeWithThrowingValueOf valueOf(String value) {
-            throw new RuntimeException();
+    @Nested
+    class ValueOfMethodTests {
+        public record TestType(int value) {
+            public static TestType valueOf(String value) {
+                return new TestType(Integer.parseInt(value));
+            }
         }
-    }
 
-    @Test
-    void shouldThrowOnValueOfInvocationException() {
-        assertThrows(
-            ValueConversionException.class,
-            () -> converter.convert(TestTypeWithThrowingValueOf.class, "test")
-        );
+        @Test
+        void shouldConvertTypesWithValueOfMethod() {
+            var value = "127";
+
+            assertEquals(new TestType(127), converter.convert(TestType.class, value));
+        }
+
+        public record NonStaticValueOfContainer(int value) {
+            public NonStaticValueOfContainer valueOf(String value) {
+                return new NonStaticValueOfContainer(Integer.parseInt(value));
+            }
+        }
+
+        @Test
+        void shouldThrowOnUnsupportedTypeWithNonStaticValueOfMethod() {
+            // Also register an unrelated converter that doesn't support NonStaticValueOfContainer
+            // for test coverage purposes
+            converter.addValueConverter(
+                DateTimeFormatter.class,
+                (type, argTypes, value) -> DateTimeFormatter.ofPattern(value)
+            );
+
+            assertThrows(
+                UnsupportedTypeConversionException.class,
+                () -> converter.convert(NonStaticValueOfContainer.class, "")
+            );
+        }
+
+        public record StaticValueOfReturningDifferentType() {
+            public static String valueOf(String value) {
+                return "empty";
+            }
+        }
+
+        @Test
+        void shouldThrowOnUnsupportedTypeWithStaticValueOfReturningDifferentType() {
+            assertThrows(
+                UnsupportedTypeConversionException.class,
+                () -> converter.convert(StaticValueOfReturningDifferentType.class, "")
+            );
+        }
+
+        public record TestTypeWithThrowingValueOf() {
+            public static TestTypeWithThrowingValueOf valueOf(String value) {
+                throw new RuntimeException();
+            }
+        }
+
+        @Test
+        void shouldThrowOnValueOfInvocationException() {
+            assertThrows(
+                ValueConversionException.class,
+                () -> converter.convert(TestTypeWithThrowingValueOf.class, "test")
+            );
+        }
     }
 }

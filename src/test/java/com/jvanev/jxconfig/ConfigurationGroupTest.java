@@ -52,10 +52,15 @@ class ConfigurationGroupTest {
 
         @ConfigFile(filename = "GroupTestConfiguration.properties")
         public record TopLevelConfiguration(
-            @ConfigProperty(name = "EnabledDeveloperMode")
+            @ConfigProperty(name = "Environment")
+            String environment,
+
+            @ConfigProperty(name = "EnabledDeveloperMode", defaultValue = "false")
+            @DependsOn(property = "Environment", value = "dev")
             boolean enabledDevMode,
 
-            @ConfigProperty(name = "DisabledDeveloperMode")
+            @ConfigProperty(name = "DisabledDeveloperMode", defaultValue = "false")
+            @DependsOn(property = "Environment", value = "prod")
             boolean disabledDevMode,
 
             @ConfigGroup

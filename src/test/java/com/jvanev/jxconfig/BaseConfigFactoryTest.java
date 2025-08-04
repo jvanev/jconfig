@@ -149,5 +149,20 @@ class BaseConfigFactoryTest {
                 () -> factory.createConfig(MultipleConstructorsConfiguration.class)
             );
         }
+
+        @ConfigFile(filename = "BaseTestConfiguration")
+        public record MissingFileConfiguration(
+            @ConfigProperty(name = "BooleanProperty")
+            boolean booleanProperty
+        ) {
+        }
+
+        @Test
+        void onMissingConfigurationFile_ShouldThrow() {
+            assertThrows(
+                ConfigurationBuildException.class,
+                () -> factory.createConfig(MissingFileConfiguration.class)
+            );
+        }
     }
 }

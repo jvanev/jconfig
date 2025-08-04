@@ -234,4 +234,15 @@ class ConfigurationContainerFactoryTest {
             () -> factory.createConfigContainer(MultipleConstructorsConfigurationContainer.class)
         );
     }
+
+    private record InaccessibleConfigurationContainer() {
+    }
+
+    @Test
+    void onFailedConfigurationInstantiation_ShouldThrow() {
+        assertThrows(
+            ConfigurationBuildException.class,
+            () -> factory.createConfigContainer(InaccessibleConfigurationContainer.class)
+        );
+    }
 }

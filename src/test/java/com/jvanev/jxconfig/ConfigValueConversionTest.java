@@ -229,31 +229,23 @@ class ConfigValueConversionTest {
 
     @Nested
     class InvalidPropertyTests {
+        @Test
+        void registeringMultipleConvertersForTheSameType_ShouldThrow() {
+            var factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config");
+
+            assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    factory.withConverter(DateTimeFormatter.class, (type, argTypes, value) -> value);
+                    factory.withConverter(DateTimeFormatter.class, (type, argTypes, value) -> value);
+                }
+            );
+        }
+
         @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
         public record InvalidIntegerConfiguration(
             @ConfigProperty(name = "InvalidIntegerProperty")
             int integerProperty
-        ) {
-        }
-
-        @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
-        public record InvalidCharConfiguration(
-            @ConfigProperty(name = "InvalidCharacterProperty")
-            char charProperty
-        ) {
-        }
-
-        @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
-        public record InvalidEnumCasingConfiguration(
-            @ConfigProperty(name = "EnumUCFirstProperty")
-            LogLevel logLevel
-        ) {
-        }
-
-        @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
-        public record InvalidIntegerArrayConfiguration(
-            @ConfigProperty(name = "InvalidIntegerArrayProperty")
-            List<Integer> integerArrayProperty
         ) {
         }
 
@@ -265,6 +257,13 @@ class ConfigValueConversionTest {
             );
         }
 
+        @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
+        public record InvalidCharConfiguration(
+            @ConfigProperty(name = "InvalidCharacterProperty")
+            char charProperty
+        ) {
+        }
+
         @Test
         void invalidStringToCharacterConversion_ShouldThrow() {
             assertThrows(
@@ -273,12 +272,26 @@ class ConfigValueConversionTest {
             );
         }
 
+        @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
+        public record InvalidEnumCasingConfiguration(
+            @ConfigProperty(name = "EnumUCFirstProperty")
+            LogLevel logLevel
+        ) {
+        }
+
         @Test
         void invalidEnumCasing_shouldThrow() {
             assertThrows(
                 ConfigurationBuildException.class,
                 () -> factory.createConfig(InvalidEnumCasingConfiguration.class)
             );
+        }
+
+        @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
+        public record InvalidIntegerArrayConfiguration(
+            @ConfigProperty(name = "InvalidIntegerArrayProperty")
+            List<Integer> integerArrayProperty
+        ) {
         }
 
         @Test
