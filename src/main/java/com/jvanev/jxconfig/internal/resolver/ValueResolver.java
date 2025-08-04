@@ -101,7 +101,7 @@ public final class ValueResolver {
     public String resolveValue(Parameter parameter) {
         var configParameter = getConfigParameter(parameter);
 
-        return !configParameter.hasDependency || isDependencySatisfied(configParameter)
+        return !configParameter.hasDependency || isDependencyChainSatisfied(configParameter, new LinkedHashSet<>())
             ? getConfigValue(configParameter)
             : configParameter.defaultValue;
 
@@ -130,36 +130,11 @@ public final class ValueResolver {
 
         var dependencyInfo = ReflectionUtil.getDependsOn(parameter);
         var dependency = parameters.get(dependencyInfo.property());
-        var dependencyValue = !dependency.hasDependency || isDependencySatisfied(dependency)
-            ? getConfigValue(dependency)
-            : dependency.defaultValue;
-
-        return dependencyInfo.value().equals(dependencyValue);
-    }
-
-    /**
-     * Determines whether the dependency condition for the specified parameter is satisfied.
-     * <p>
-     * The condition is satisfied if, and only if:
-     * <ul>
-     *     <li>The parameter doesn't have a dependency</li>
-     *     <li>The resolved value of the declared dependency satisfies the dependency condition</li>
-     * </ul>
-     *
-     * @param parameter The parameter whose dependency should be checked
-     *
-     * @return {@code true} if the dependency condition is satisfied, {@code false} otherwise.
-     *
-     * @throws InvalidDeclarationException If the parameter depends on an unknown parameter.
-     * @throws CircularDependencyException If a circular dependency is detected (e.g., A -> B -> A).
-     */
-    private boolean isDependencySatisfied(ConfigParameter parameter) {
-        var dependency = getDependency(parameter);
         var dependencyValue = !dependency.hasDependency || isDependencyChainSatisfied(dependency, new LinkedHashSet<>())
             ? getConfigValue(dependency)
             : dependency.defaultValue;
 
-        return parameter.dependencyValue.equals(dependencyValue);
+        return dependencyInfo.value().equals(dependencyValue);
     }
 
     /**
@@ -177,16 +152,8 @@ public final class ValueResolver {
      */
     private boolean isDependencyChainSatisfied(ConfigParameter dependentParameter, Set<String> checkedLinks) {
         if (!checkedLinks.add(dependentParameter.propertyName)) {
-            var links = checkedLinks.stream().map(parameters::get).toList();
-            var chain = new StringBuilder();
-
-            for (int i = 0; i < checkedLinks.size(); i++) {
-                if (i > 0) {
-                    chain.append(" depends on -> ");
-                }
-
-                chain.append(links.get(i));
-            }
+            var links = checkedLinks.stream().map(parameters::get).map(ConfigParameter::toString).toList();
+            var chain = String.join(" depends on -> ", links) + " depends on -> " + dependentParameter;
 
             throw new CircularDependencyException("Circular dependency chain detected: " + chain);
         }
