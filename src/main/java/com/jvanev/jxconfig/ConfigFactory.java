@@ -45,12 +45,11 @@ import java.util.Properties;
 public final class ConfigFactory {
     private final Path configurationDirectory;
 
-    private final ValueConverter converter;
+    private final ValueConverter converter = new ValueConverter();
 
     // Instances of the factory are obtained through the dedicated builder
     private ConfigFactory(String configurationDirectory) {
         this.configurationDirectory = Path.of(configurationDirectory);
-        this.converter = new ValueConverter();
     }
 
     /**
@@ -302,12 +301,11 @@ public final class ConfigFactory {
     public static class Builder {
         private final String configurationDirectory;
 
-        private final Map<Class<?>, IValueConverter> converters;
+        private final Map<Class<?>, IValueConverter> converters = new LinkedHashMap<>();
 
         // Instantiable by the builder method only
         private Builder(String configurationDirectory) {
             this.configurationDirectory = configurationDirectory;
-            this.converters = new LinkedHashMap<>();
         }
 
         /**

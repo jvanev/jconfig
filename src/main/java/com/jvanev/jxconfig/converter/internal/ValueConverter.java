@@ -72,7 +72,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Custom converters registered via this method take precedence over the default conversion logic
  * for direct matches. If the newly registered converter's supported type doesn't match the target
  * type directly, a more specific conversion mechanism will be looked up first; if no direct match exists
- * the converters register will be reviewed for a converter that can provide an assignable value.
+ * the converters register will be reviewed in insertion order for a converter that can provide an assignable value.
  * <p>
  * This allows you to override existing behaviors or introduce support for new, complex types.
  * For instance, if you register a converter for {@code int.class}, the default string-to-integer

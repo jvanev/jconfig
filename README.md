@@ -157,8 +157,8 @@ converters take precedence over the default conversion mechanism for direct targ
 While adding support for additional types doesn't change the default behavior, adding a custom
 converter for an already supported type effectively overrides the default conversion mechanism for this type.
 
-If no converter matches the target type directly, the custom converters will be reviewed to check
-if there is a converter that can produce an assignable value, as a last resort.
+If no converter matches the target type directly, the custom converters will be checked in insertion order;
+the first one that can produce an assignable value will be used.
 
 #### Example
 

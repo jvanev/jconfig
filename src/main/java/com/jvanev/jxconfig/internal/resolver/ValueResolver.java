@@ -42,12 +42,12 @@ public final class ValueResolver {
      * Contains the metadata of constructor parameters annotated with {@link ConfigProperty}, keyed by their
      * {@link ConfigProperty#name()}.
      */
-    private final Map<String, ConfigParameter> parameters;
+    private final Map<String, ConfigParameter> parameters = new HashMap<>();
 
     /**
      * A cache for already resolved values, mapped to their fully qualified key in the configuration file.
      */
-    private final Map<String, String> resolvedValues;
+    private final Map<String, String> resolvedValues = new HashMap<>();
 
     /**
      * Creates a new ValueResolver.
@@ -60,8 +60,6 @@ public final class ValueResolver {
     public ValueResolver(Properties properties, Class<?> container, String namespace, Parameter[] parameters) {
         this.properties = properties;
         this.container = container;
-        this.parameters = new HashMap<>();
-        this.resolvedValues = new HashMap<>();
 
         for (Parameter parameter : parameters) {
             if (!ReflectionUtil.isConfigGroup(parameter)) {
