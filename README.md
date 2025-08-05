@@ -258,8 +258,11 @@ public static void main(String[] args) {
 ### Custom Dependency Condition Check
 
 By default, a **case-sensitive string comparison** is performed to determine whether
-the resolved value of the dependency matches the required value specified through `@DependsOn.value`.
-If this default doesn't meet your requirements, you can add your own logic that complements the default behavior.
+the resolved value of the dependency matches the required value specified in `@DependsOn.value`.
+
+If this doesn't meet your needs, you can provide a custom comparison strategy via a `DependencyChecker`.
+The custom checker will be used for every explicitly declared `DependsOn.operator` that doesn't match the
+`DependencyChecker.DEFAULT_OPERATOR` symbol (which is `X`, of course).
 
 #### Example
 
@@ -321,8 +324,7 @@ public class Main {
         @ConfigProperty(name = "ConfigurationD", defaultValue = "false")
         @DependsOn(property = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
         boolean configurationD
-    ) {
-    }
+    ) {}
 
     public static void main(String[] args) {
         var factory = ConfigFactory.builder("../configDir")
@@ -345,8 +347,9 @@ public class Main {
 }
 ```
 
-> **Note:** The custom checker is invoked on every dependent configuration property.
-> Just make sure your checker is fast enough if performance is a concern.
+> **Note:** Your custom checker will be invoked for every configuration property that declares
+> a dependency with a non-default `@DependsOn.operator`.
+> Ensure the checker is performant if you expect a high number of dependencies relying on it.
 
 ---
 
