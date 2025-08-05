@@ -251,12 +251,102 @@ public static void main(String[] args) {
 > **Note:** By default, the `value` parameter of `@DependsOn` is set to `true`, emulating a boolean-style comparison,
 > so technically the declaration of `@DependsOn.value` in the example above is redundant.
 
-> **Note 2:** A **case-sensitive string comparison** is performed to determine whether
-> the value of the dependency matches the required value in `@DependsOn.value`.
-
-> **Note 3:** The dependent value is compared to the dependency's resolved value, which means if the dependency has a
+> **Note 2:** The dependent value is compared to the dependency's resolved value, which means if the dependency has a
 > dependency of its own, that relationship will be checked first to determine
 > the final runtime value for the dependency.
+
+### Custom Dependency Condition Check
+
+By default, a **case-sensitive string comparison** is performed to determine whether
+the resolved value of the dependency matches the required value specified through `@DependsOn.value`.
+If this default doesn't meet your requirements, you can add your own logic that complements the default behavior.
+
+#### Example
+
+`Example.properties`
+
+```properties
+SomeNumber = 127
+LogLevel = TRACE
+
+ConfigurationA = true
+ConfigurationB = true
+ConfigurationC = true
+ConfigurationD = true
+```
+
+`Main.java`
+
+```java
+public class Main {
+    private static class CustomChecker implements DependencyChecker {
+        @Override
+        public boolean check(String dependencyValue, String operator, String requiredValue) {
+            return switch (operator) {
+                case ">" -> Integer.parseInt(dependencyValue) > Integer.parseInt(requiredValue);
+                case "|" -> {
+                    for (var entry : requiredValue.split("\\|")) {
+                        if (dependencyValue.equals(entry)) {
+                            yield true;
+                        }
+                    }
+
+                    yield false;
+                }
+                default -> false;
+            };
+        }
+    }
+
+    @ConfigFile(filename = "Example.properties")
+    record ExampleConfiguration(
+        @ConfigProperty(name = "SomeNumber")
+        int integerA,
+
+        @ConfigProperty(name = "LogLevel")
+        System.Logger.Level logLevel,
+
+        @ConfigProperty(name = "ConfigurationA", defaultValue = "false")
+        @DependsOn(property = "SomeNumber", operator = ">", value = "126")
+        boolean configurationA,
+
+        @ConfigProperty(name = "ConfigurationB", defaultValue = "false")
+        @DependsOn(property = "SomeNumber", operator = ">", value = "127")
+        boolean configurationB,
+
+        @ConfigProperty(name = "ConfigurationC", defaultValue = "false")
+        @DependsOn(property = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
+        boolean configurationC,
+
+        @ConfigProperty(name = "ConfigurationD", defaultValue = "false")
+        @DependsOn(property = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
+        boolean configurationD
+    ) {
+    }
+
+    public static void main(String[] args) {
+        var factory = ConfigFactory.builder("../configDir")
+            .withDependencyChecker(new CustomChecker())
+            .build();
+        var config = factory.createConfig(ExampleConfiguration.class);
+
+        System.out.println(config);
+
+        // Output:
+        // ExampleConfiguration[
+        //     integerA=127,
+        //     logLevel=TRACE,
+        //     configurationA=true,
+        //     configurationB=false,
+        //     configurationC=true,
+        //     configurationD=false
+        // ]
+    }
+}
+```
+
+> **Note:** The custom checker is invoked on every dependent configuration property.
+> Just make sure your checker is fast enough if performance is a concern.
 
 ---
 

@@ -15,6 +15,7 @@
  */
 package com.jvanev.jxconfig.annotation;
 
+import com.jvanev.jxconfig.resolver.DependencyChecker;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -32,6 +33,19 @@ public @interface DependsOn {
      * @return The {@link ConfigProperty#name()} of the dependency.
      */
     String property();
+
+    /**
+     * The operator to be used for condition check.
+     * <p>
+     * Defaults to {@link DependencyChecker#DEFAULT_OPERATOR}, meaning the default,
+     * case-sensitive string comparison is used.
+     * <p>
+     * <b>Warning:</b> If no custom {@link DependencyChecker} has been registered,
+     * a {@code NullPointerException} will be thrown when performing the check.
+     *
+     * @return The condition check operator.
+     */
+    String operator() default DependencyChecker.DEFAULT_OPERATOR;
 
     /**
      * The value the dependency must have in order for the dependency condition to be satisfied.

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jvanev.jxconfig.internal.resolver;
+package com.jvanev.jxconfig.resolver.internal;
 
 import com.jvanev.jxconfig.annotation.ConfigGroup;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
@@ -21,6 +21,7 @@ import com.jvanev.jxconfig.annotation.DependsOn;
 import com.jvanev.jxconfig.exception.CircularDependencyException;
 import com.jvanev.jxconfig.exception.InvalidDeclarationException;
 import com.jvanev.jxconfig.internal.ReflectionUtil;
+import com.jvanev.jxconfig.resolver.DependencyChecker;
 import java.lang.reflect.Parameter;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -37,6 +38,8 @@ public final class ValueResolver {
     private final Properties properties;
 
     private final Class<?> container;
+
+    private final DependencyChecker dependencyChecker;
 
     /**
      * Contains the metadata of constructor parameters annotated with {@link ConfigProperty}, keyed by their
@@ -56,10 +59,18 @@ public final class ValueResolver {
      * @param container  The {@link Class} whose configuration values will be resolved
      * @param namespace  The namespace from which configuration values will be retrieved
      * @param parameters The parameters for which value resolution will be performed
+     * @param checker    The custom dependency condition checking mechanism
      */
-    public ValueResolver(Properties properties, Class<?> container, String namespace, Parameter[] parameters) {
+    public ValueResolver(
+        Properties properties,
+        Class<?> container,
+        String namespace,
+        Parameter[] parameters,
+        DependencyChecker checker
+    ) {
         this.properties = properties;
         this.container = container;
+        this.dependencyChecker = checker;
 
         for (Parameter parameter : parameters) {
             if (!ReflectionUtil.isConfigGroup(parameter)) {
@@ -102,7 +113,6 @@ public final class ValueResolver {
         return !configParameter.hasDependency || isDependencyChainSatisfied(configParameter, new LinkedHashSet<>())
             ? getConfigValue(configParameter)
             : configParameter.defaultValue;
-
     }
 
     /**
@@ -131,8 +141,12 @@ public final class ValueResolver {
         var dependencyValue = !dependency.hasDependency || isDependencyChainSatisfied(dependency, new LinkedHashSet<>())
             ? getConfigValue(dependency)
             : dependency.defaultValue;
+        var requiredValue = dependencyInfo.value();
+        var operator = dependencyInfo.operator();
 
-        return dependencyInfo.value().equals(dependencyValue);
+        return operator.equals(DependencyChecker.DEFAULT_OPERATOR)
+            ? requiredValue.equals(dependencyValue)
+            : checkerNotNull(parameter) && dependencyChecker.check(dependencyValue, operator, requiredValue);
     }
 
     /**
@@ -160,8 +174,52 @@ public final class ValueResolver {
         var dependencyValue = !dependency.hasDependency || isDependencyChainSatisfied(dependency, checkedLinks)
             ? getConfigValue(dependency)
             : dependency.defaultValue;
+        var requiredValue = dependentParameter.dependencyValue;
+        var operator = dependentParameter.checkOperator;
 
-        return dependentParameter.dependencyValue.equals(dependencyValue);
+        return dependentParameter.checkOperator.equals(DependencyChecker.DEFAULT_OPERATOR)
+            ? dependentParameter.dependencyValue.equals(dependencyValue)
+            : checkerNotNull(dependentParameter) && dependencyChecker.check(dependencyValue, operator, requiredValue);
+    }
+
+    /**
+     * Checks whether a dependency checking mechanism has been set.
+     *
+     * @param parameter The parameter to be used to build a debug message if the check fails
+     *
+     * @return {@code true} or throws.
+     *
+     * @throws NullPointerException If {@link #dependencyChecker} is {@code null};
+     */
+    private boolean checkerNotNull(Parameter parameter) {
+        if (dependencyChecker == null) {
+            var fullName = container.getSimpleName() + "." + parameter.getName();
+            var dependsOn = ReflectionUtil.getDependsOn(parameter);
+            var identity = fullName + "(operator " + dependsOn.operator() + ")";
+
+            throw new NullPointerException("No custom dependency checker found for " + identity);
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks whether a dependency checking mechanism has been set.
+     *
+     * @param parameter The parameter to be used to build a debug message if the check fails
+     *
+     * @return {@code true} or throws.
+     *
+     * @throws NullPointerException If {@link #dependencyChecker} is {@code null};
+     */
+    private boolean checkerNotNull(ConfigParameter parameter) {
+        if (dependencyChecker == null) {
+            var identity = parameter + "(operator " + parameter.checkOperator + ")";
+
+            throw new NullPointerException("No custom dependency checker found for " + identity);
+        }
+
+        return true;
     }
 
     /**

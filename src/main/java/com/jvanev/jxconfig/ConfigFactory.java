@@ -23,7 +23,8 @@ import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import com.jvanev.jxconfig.exception.InvalidDeclarationException;
 import com.jvanev.jxconfig.exception.ValueConversionException;
 import com.jvanev.jxconfig.internal.ReflectionUtil;
-import com.jvanev.jxconfig.internal.resolver.ValueResolver;
+import com.jvanev.jxconfig.resolver.DependencyChecker;
+import com.jvanev.jxconfig.resolver.internal.ValueResolver;
 import java.io.IOException;
 import java.lang.reflect.Parameter;
 import java.nio.file.Files;
@@ -45,22 +46,15 @@ import java.util.Properties;
 public final class ConfigFactory {
     private final Path configurationDirectory;
 
-    private final ValueConverter converter = new ValueConverter();
+    private final ValueConverter converter;
+
+    private final DependencyChecker checker;
 
     // Instances of the factory are obtained through the dedicated builder
-    private ConfigFactory(String configurationDirectory) {
+    private ConfigFactory(String configurationDirectory, ValueConverter converter, DependencyChecker checker) {
         this.configurationDirectory = Path.of(configurationDirectory);
-    }
-
-    /**
-     * Adds the specified converter to the value conversion mechanism
-     * as a primary converter for values of the specified type.
-     *
-     * @param type      The type of values the converter supports
-     * @param converter The converter for the specified type
-     */
-    private void addValueConverter(Class<?> type, IValueConverter converter) {
-        this.converter.addValueConverter(type, converter);
+        this.converter = converter;
+        this.checker = checker;
     }
 
     /**
@@ -194,7 +188,7 @@ public final class ConfigFactory {
         var constructor = type.getDeclaredConstructors()[0];
         var parameters = constructor.getParameters();
         var arguments = new Object[parameters.length];
-        var valueResolver = new ValueResolver(context.properties(), type, context.namespace(), parameters);
+        var valueResolver = new ValueResolver(context.properties(), type, context.namespace(), parameters, checker);
         var processedParameters = new HashMap<String, String>();
 
         for (var i = 0; i < parameters.length; i++) {
@@ -303,6 +297,8 @@ public final class ConfigFactory {
 
         private final Map<Class<?>, IValueConverter> converters = new LinkedHashMap<>();
 
+        private DependencyChecker dependencyChecker = null;
+
         // Instantiable by the builder method only
         private Builder(String configurationDirectory) {
             this.configurationDirectory = configurationDirectory;
@@ -330,18 +326,32 @@ public final class ConfigFactory {
         }
 
         /**
+         * Registers a custom dependency condition checking mechanism that complements the default,
+         * case-sensitive {@code String} comparison.
+         *
+         * @param dependencyChecker The dependency condition checker
+         *
+         * @return This builder.
+         */
+        public Builder withDependencyChecker(DependencyChecker dependencyChecker) {
+            this.dependencyChecker = dependencyChecker;
+
+            return this;
+        }
+
+        /**
          * Builds a new instance of {@link ConfigFactory} set up in the context of this builder.
          *
          * @return The fully initialized {@link ConfigFactory} object.
          */
         public ConfigFactory build() {
-            var factory = new ConfigFactory(configurationDirectory);
+            var converter = new ValueConverter();
 
             for (var set : converters.entrySet()) {
-                factory.addValueConverter(set.getKey(), set.getValue());
+                converter.addValueConverter(set.getKey(), set.getValue());
             }
 
-            return factory;
+            return new ConfigFactory(configurationDirectory, converter, dependencyChecker);
         }
     }
 }

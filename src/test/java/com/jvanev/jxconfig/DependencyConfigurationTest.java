@@ -16,9 +16,11 @@
 package com.jvanev.jxconfig;
 
 import com.jvanev.jxconfig.annotation.ConfigFile;
+import com.jvanev.jxconfig.annotation.ConfigGroup;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
 import com.jvanev.jxconfig.annotation.DependsOn;
 import com.jvanev.jxconfig.exception.ConfigurationBuildException;
+import com.jvanev.jxconfig.resolver.DependencyChecker;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import org.junit.jupiter.api.BeforeEach;
@@ -284,6 +286,133 @@ class DependencyConfigurationTest {
             assertThrows(
                 ConfigurationBuildException.class,
                 () -> factory.createConfig(CircularDependencyGraph.class)
+            );
+        }
+    }
+
+    @Nested
+    class CustomDependencyCheckerTests {
+        private ConfigFactory configFactory;
+
+        static class CustomChecker implements DependencyChecker {
+            @Override
+            public boolean check(String dependencyValue, String operator, String requiredValue) {
+                return switch (operator) {
+                    case ">" -> Integer.parseInt(dependencyValue) > Integer.parseInt(requiredValue);
+                    case "<" -> Integer.parseInt(dependencyValue) < Integer.parseInt(requiredValue);
+                    case "|" -> {
+                        for (var entry : requiredValue.split("\\|")) {
+                            if (dependencyValue.equals(entry)) {
+                                yield true;
+                            }
+                        }
+
+                        yield false;
+                    }
+                    default -> false;
+                };
+            }
+        }
+
+        @BeforeEach
+        void setUp() {
+            configFactory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config")
+                .withDependencyChecker(new CustomChecker())
+                .build();
+        }
+
+        @ConfigFile(filename = "DependencyTestConfiguration.properties")
+        public record DependencyConfiguration(
+            @ConfigProperty(name = "IntegerPropertyOne")
+            int integerPropertyOne,
+
+            @ConfigProperty(name = "IntegerPropertyTwo")
+            int integerPropertyTwo,
+
+            @ConfigProperty(name = "LogLevel")
+            System.Logger.Level logLevel,
+
+            @ConfigProperty(name = "ConfigurationB", defaultValue = "false")
+            @DependsOn(property = "IntegerPropertyOne", operator = ">", value = "65534")
+            boolean configurationB,
+
+            @ConfigProperty(name = "ConfigurationC", defaultValue = "false")
+            @DependsOn(property = "IntegerPropertyTwo", operator = "<", value = "65536")
+            boolean configurationC,
+
+            @ConfigProperty(name = "ConfigurationE", defaultValue = "false")
+            @DependsOn(property = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
+            boolean configurationE,
+
+            @ConfigProperty(name = "ConfigurationF", defaultValue = "false")
+            @DependsOn(property = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
+            boolean configurationF,
+
+            @ConfigGroup
+            @DependsOn(property = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
+            ConfigurationGroup configGroup1,
+
+            @ConfigGroup
+            @DependsOn(property = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
+            ConfigurationGroup configGroup2
+        ) {
+            public record ConfigurationGroup(
+                @ConfigProperty(name = "ConfigurationB", defaultValue = "false")
+                boolean configurationB,
+
+                @ConfigProperty(name = "ConfigurationC", defaultValue = "false")
+                boolean configurationC
+            ) {
+            }
+        }
+
+        @Test
+        void onCustomOperator_ShouldUseCustomChecker() {
+            var config = configFactory.createConfig(DependencyConfiguration.class);
+
+            assertTrue(config.configurationB());
+            assertTrue(config.configurationC());
+            assertTrue(config.configurationE());
+            assertFalse(config.configurationF());
+            assertTrue(config.configGroup1().configurationB());
+            assertTrue(config.configGroup1().configurationC());
+            assertFalse(config.configGroup2().configurationB());
+            assertFalse(config.configGroup2().configurationC());
+        }
+
+        @Test
+        void onCustomOperatorAndMissingCustomChecker_ShouldThrow() {
+            var factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config").build();
+
+            assertThrows(
+                ConfigurationBuildException.class,
+                () -> factory.createConfig(DependencyConfiguration.class)
+            );
+        }
+
+        @ConfigFile(filename = "DependencyTestConfiguration.properties")
+        public record DependencyConfigurationAlt(
+            @ConfigProperty(name = "LogLevel")
+            System.Logger.Level logLevel,
+
+            @ConfigGroup
+            @DependsOn(property = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
+            ConfigurationGroup configGroup1
+        ) {
+            public record ConfigurationGroup(
+                @ConfigProperty(name = "ConfigurationB", defaultValue = "false")
+                boolean configurationB
+            ) {
+            }
+        }
+
+        @Test
+        void onCustomOperatorAndMissingCustomChecker_GroupVersion_ShouldThrow() {
+            var factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config").build();
+
+            assertThrows(
+                ConfigurationBuildException.class,
+                () -> factory.createConfig(DependencyConfigurationAlt.class)
             );
         }
     }

@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jvanev.jxconfig.internal.resolver;
+package com.jvanev.jxconfig.resolver.internal;
 
 import com.jvanev.jxconfig.annotation.ConfigProperty;
 import com.jvanev.jxconfig.annotation.DependsOn;
 import com.jvanev.jxconfig.internal.ReflectionUtil;
+import com.jvanev.jxconfig.resolver.DependencyChecker;
 import java.lang.reflect.Parameter;
 
 /**
@@ -52,6 +53,11 @@ final class ConfigParameter {
     final boolean hasDependency;
 
     /**
+     * The operator used to check the dependency condition for this parameter.
+     */
+    final String checkOperator;
+
+    /**
      * The {@link DependsOn#property()} for this parameter. Might be an empty string if the parameter
      * is not annotated with {@link DependsOn}, use {@link #hasDependency} to determine if it is.
      */
@@ -80,6 +86,7 @@ final class ConfigParameter {
 
         var dependency = ReflectionUtil.getDependsOn(parameter);
         hasDependency = dependency != null;
+        checkOperator = hasDependency ? dependency.operator() : DependencyChecker.DEFAULT_OPERATOR;
         dependencyName = hasDependency ? dependency.property() : "";
         dependencyValue = hasDependency ? dependency.value() : "";
     }
