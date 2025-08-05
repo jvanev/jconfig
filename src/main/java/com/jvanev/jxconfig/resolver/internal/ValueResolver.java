@@ -144,7 +144,7 @@ public final class ValueResolver {
         var requiredValue = dependencyInfo.value();
         var operator = dependencyInfo.operator();
 
-        return operator.equals(DependencyChecker.DEFAULT_OPERATOR)
+        return operator.isEmpty()
             ? requiredValue.equals(dependencyValue)
             : checkerNotNull(parameter) && dependencyChecker.check(dependencyValue, operator, requiredValue);
     }
@@ -177,7 +177,7 @@ public final class ValueResolver {
         var requiredValue = dependentParameter.dependencyValue;
         var operator = dependentParameter.checkOperator;
 
-        return dependentParameter.checkOperator.equals(DependencyChecker.DEFAULT_OPERATOR)
+        return dependentParameter.checkOperator.isEmpty()
             ? dependentParameter.dependencyValue.equals(dependencyValue)
             : checkerNotNull(dependentParameter) && dependencyChecker.check(dependencyValue, operator, requiredValue);
     }

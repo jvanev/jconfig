@@ -7,15 +7,10 @@ package com.jvanev.jxconfig.resolver;
 @FunctionalInterface
 public interface DependencyChecker {
     /**
-     * The default condition check operator's symbol.
-     */
-    String DEFAULT_OPERATOR = "X";
-
-    /**
      * Returns the result of checking the dependency's value against the required value using the specified operator.
      * <p>
      * <b>Note:</b> This method will only be invoked for non-default operators. The library's
-     * built-in mechanism handles the {@link #DEFAULT_OPERATOR} check automatically.
+     * built-in mechanism handles the check automatically if the operator is an empty string.
      *
      * @param dependencyValue The resolved value of the dependency
      * @param operator        The comparison operator to be used

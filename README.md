@@ -261,8 +261,7 @@ By default, a **case-sensitive string comparison** is performed to determine whe
 the resolved value of the dependency matches the required value specified in `@DependsOn.value`.
 
 If this doesn't meet your needs, you can provide a custom comparison strategy via a `DependencyChecker`.
-The custom checker will be used for every explicitly declared `DependsOn.operator` that doesn't match the
-`DependencyChecker.DEFAULT_OPERATOR` symbol (which is `X`, of course).
+`DependsOn.operator` should be used to specify operators supported by the custom checker.
 
 #### Example
 

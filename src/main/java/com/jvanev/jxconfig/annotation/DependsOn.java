@@ -37,15 +37,14 @@ public @interface DependsOn {
     /**
      * The operator to be used for condition check.
      * <p>
-     * Defaults to {@link DependencyChecker#DEFAULT_OPERATOR}, meaning the default,
-     * case-sensitive string comparison is used.
+     * Defaults to an empty string, meaning the default, case-sensitive string comparison will be used.
      * <p>
-     * <b>Warning:</b> If no custom {@link DependencyChecker} has been registered,
+     * <b>Warning:</b> If no custom {@link DependencyChecker} has been registered and non-default operator is set,
      * a {@code NullPointerException} will be thrown when performing the check.
      *
      * @return The condition check operator.
      */
-    String operator() default DependencyChecker.DEFAULT_OPERATOR;
+    String operator() default "";
 
     /**
      * The value the dependency must have in order for the dependency condition to be satisfied.
