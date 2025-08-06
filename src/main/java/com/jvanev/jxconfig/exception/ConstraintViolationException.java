@@ -13,23 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jvanev.jxconfig.converter;
-
-import java.lang.reflect.Type;
+package com.jvanev.jxconfig.exception;
 
 /**
- * Implementations of this interface provide {@link String} value conversions.
+ * Thrown when the configuration value constraints have been violated.
  */
-@FunctionalInterface
-public interface IValueConverter {
+public class ConstraintViolationException extends RuntimeException {
     /**
-     * Converts a {@link String} value to the specified target type.
+     * Creates a new ConstraintViolationException.
      *
-     * @param targetType    The type to which the value must be converted
-     * @param typeArguments The actual type arguments of the target type (if any)
-     * @param value         The value to be converted
-     *
-     * @return The converted value.
+     * @param message A message describing the violation
      */
-    Object convert(Type targetType, Type[] typeArguments, String value);
+    public ConstraintViolationException(String message) {
+        super(message);
+    }
 }

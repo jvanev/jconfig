@@ -125,12 +125,12 @@ final class AggregateTypeUtil {
      *
      * @throws UnsupportedTypeConversionException If conversions to the specified collection type are not supported.
      */
-    static Collection<Object> toCollection(ValueConverter converter, Class<?> type, Type valueType, String value) {
+    static Collection<Object> toCollection(Converter converter, Class<?> type, Type valueType, String value) {
         if (type != List.class && type != Set.class) {
             throw new UnsupportedTypeConversionException(
                 "Cannot convert value '" + value + "' to type " + type.getSimpleName() +
-                "<" + valueType.getTypeName() + ">. " +
-                "Consider registering a custom converter via ConfigFactory.addValueConverter"
+                    "<" + valueType.getTypeName() + ">. " +
+                    "Consider registering a custom converter via ConfigFactory.addValueConverter"
             );
         }
 
@@ -167,7 +167,7 @@ final class AggregateTypeUtil {
      *
      * @throws IllegalArgumentException If the value contains malformed tokens.
      */
-    static Map<Object, Object> toMap(ValueConverter converter, Type keyType, Type valueType, String value) {
+    static Map<Object, Object> toMap(Converter converter, Type keyType, Type valueType, String value) {
         var entries = value.isBlank() ? new String[0] : ARRAY_SPLIT_REGEX.split(value);
         var map = new LinkedHashMap<>();
 

@@ -3,25 +3,20 @@
 A lightweight, declarative configuration factory for Java. Provides type-safety, effortless conditional
 value resolution, grouping, namespaces, and a flexible value conversion mechanism.
 
----
-
 ## Requirements
 
 Requires Java 17 or newer.
-
----
 
 ## Features
 
 - Minimal API surface
 - Declarative configuration types - Describe your configurations and let the factory do the work for you
 - Extensible value conversion mechanism - Add your own value converter if the defaults are not enough
+- Customizable validation - Define constraints for your configuration values and catch violations early
 - Configuration dependencies - Get rid of the `if` statements for individual dependent configuration
   values or entire groups
 - Namespaces - Reuse configuration types for groups of configurations with identical structures
 - Fail-fast loading - Invalid configurations are caught early
-
----
 
 ## Basics
 
@@ -83,8 +78,6 @@ public static void main(String[] args) {
 > to provide an explicit `defaultValue`. However, if an empty string cannot be converted to the required type
 > (as is the case for `boolean` or `int`), an exception will be thrown, highlighting the need for an explicit
 > `defaultValue` like for `NonExistent` in the example above.
-
----
 
 ## Value Conversion
 
@@ -195,7 +188,83 @@ public static void main(String[] args) {
 }
 ```
 
----
+## Value Constraints
+
+All types of applications rely on proper configuration; incorrect configuration might cause
+hard-to-find bugs, or even worse - serious security vulnerabilities.
+
+JXConfig offers a flexible solution to validate your configurations at startup, without making
+any decision on what sort of constraints should be used and how they should be validated.
+You're free to create your own constraints and validators, use your favorite validation framework, or both.
+
+### Example
+
+In order to apply constraints to your configurations, you must create the constraints first.
+We'll create a `Range` constraint that will be used to restrict the range of values of a configuration value.
+
+```java
+@Retention(RetentionPolicy.RUNTIME) // The annotation must be retained in order to be available at runtime
+public @interface Range {
+    int min();
+    int max();
+}
+```
+
+Next, you must create a validator providing the logic that checks for constraints violations:
+
+```java
+public class RangeValidator implements ConstraintValidator<Range, Integer> {
+    @Override
+    public boolean validate(Range annotation, Integer value) {
+        return value >= annotation.min() && value <= annotation.max();
+    }
+}
+```
+
+You just created a configuration value constraint. Now, let's test it:
+
+`Application.properties`
+
+```properties
+# Violated constraint
+Port = -1
+ThreadPoolSize = 1
+```
+
+Apply your brand-new constraint to your configuration:
+
+```java
+@ConfigFile(filename = "Application.properties")
+public record ApplicationConfig(
+    @ConfigProperty(name = "Port")
+    @Range(min = 0, max = 65535)
+    int port,
+
+    @ConfigProperty(name = "ThreadPoolSize")
+    @Range(min = 1, max = 100)
+    int poolSize
+) {}
+```
+
+Let JXConfig know that your validator exists:
+
+```java
+public static void main(String[] args) {
+    var factory = ConfigFactory.builder("../configDir")
+        // Register your brand-new validator
+        .withConstraintValidator(new RangeValidator())
+        .build();
+    
+    // This line will throw because it's constraints have been violated
+    // by the Port property in the config file
+    var appConfig = factory.createConfig(ApplicationConfig.class);
+}
+```
+
+You can now be sure that your configurations are properly set up.
+Any violation will throw an exception preventing all kinds of issues from sneaking in to the runtime.
+
+> **Note:** You can apply as many constraints as you need.
 
 ## Configuration Dependencies
 
@@ -350,8 +419,6 @@ public class Main {
 > a dependency with a non-default `@DependsOn.operator`.
 > Ensure the checker is performant if you expect a high number of dependencies relying on it.
 
----
-
 ## Configuration Groups
 
 When multiple configuration values depend on a single configuration value, we can define a configuration group
@@ -419,8 +486,6 @@ public static void main(String[] args) {
     // ]
 }
 ```
-
----
 
 ## Configuration Namespaces
 
@@ -503,8 +568,6 @@ public static void main(String[] args) {
 > **Note 2:** The namespaces can be as deeply nested as needed, the `@ConfigGroup.namespace` corresponds to
 > a single level of nesting (i.e., `@ConfigGroup("Database")` refers to the second level in the namespace
 > `LoginServer.Database.URL`)
-
----
 
 ## Configuration Containers
 
@@ -589,8 +652,6 @@ public static void main(String[] args) {
 
 > **Note:** Instantiation of the configuration types is exactly the same as if they were instantiated one by one using
 > `ConfigFactory.createConfig`.
-
----
 
 ## License
 

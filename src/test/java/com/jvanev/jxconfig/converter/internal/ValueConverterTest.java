@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ValueConverterTest {
-    private final ValueConverter converter = new ValueConverter();
+    private final Converter converter = new Converter();
 
     @Test
     void shouldConvertPrimitives() {
@@ -174,7 +174,7 @@ class ValueConverterTest {
 
     @Test
     void shouldUseCustomConvertorWithAssignableReturnValue_IfNoDirectTypeMatchFound() {
-        var converter = new ValueConverter();
+        var converter = new Converter();
         converter.addValueConverter(
             Temporal.class,
             (type, typeArguments, value) -> LocalDateTime.parse(value)
@@ -188,7 +188,7 @@ class ValueConverterTest {
     @Test
     void shouldSupportCustomGenericTypes() throws NoSuchFieldException {
         var entries = "1, 2, 3, 4";
-        var converter = new ValueConverter();
+        var converter = new Converter();
         converter.
             addValueConverter(
                 Stack.class,

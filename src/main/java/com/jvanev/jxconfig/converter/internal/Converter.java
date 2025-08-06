@@ -15,7 +15,7 @@
  */
 package com.jvanev.jxconfig.converter.internal;
 
-import com.jvanev.jxconfig.converter.IValueConverter;
+import com.jvanev.jxconfig.converter.ValueConverter;
 import com.jvanev.jxconfig.exception.UnsupportedTypeConversionException;
 import com.jvanev.jxconfig.exception.ValueConversionException;
 import java.lang.reflect.InvocationTargetException;
@@ -78,8 +78,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * For instance, if you register a converter for {@code int.class}, the default string-to-integer
  * conversion provided by this class will be skipped, and your custom converter will be invoked instead.
  */
-public final class ValueConverter {
-    private final Map<Class<?>, IValueConverter> converters = new LinkedHashMap<>();
+public final class Converter {
+    private final Map<Class<?>, ValueConverter> converters = new LinkedHashMap<>();
 
     /**
      * A cache of references to static valueOf methods mapped to their declaring type.
@@ -117,7 +117,7 @@ public final class ValueConverter {
      * @param type      The {@link Class} representing the target type this converter can produce
      * @param converter The {@code String} to {@code type} conversion mechanism
      */
-    public void addValueConverter(Class<?> type, IValueConverter converter) {
+    public void addValueConverter(Class<?> type, ValueConverter converter) {
         converters.put(type, converter);
     }
 
@@ -203,13 +203,13 @@ public final class ValueConverter {
         } catch (InvocationTargetException e) {
             throw new ValueConversionException(
                 "An error occurred while converting '" + value + "' to " + rawType.getSimpleName() +
-                " using valueOf method.",
+                    " using valueOf method.",
                 e.getTargetException()
             );
         } catch (Exception e) {
             throw new ValueConversionException(
                 "An error occurred while converting '" + value + "' to " + rawType.getSimpleName() +
-                " using valueOf method.",
+                    " using valueOf method.",
                 e
             );
         }
@@ -227,7 +227,7 @@ public final class ValueConverter {
         if (result == null) {
             throw new UnsupportedTypeConversionException(
                 "Cannot convert " + value + " to type " + rawType + ". " +
-                "Consider registering a custom converter via ConfigFactory.addValueConverter"
+                    "Consider registering a custom converter via ConfigFactory.addValueConverter"
             );
         }
 

@@ -1,0 +1,171 @@
+/*
+ * Copyright 2025 Georgi Vanev
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.jvanev.jxconfig;
+
+import com.jvanev.jxconfig.annotation.ConfigFile;
+import com.jvanev.jxconfig.annotation.ConfigProperty;
+import com.jvanev.jxconfig.exception.ConfigurationBuildException;
+import com.jvanev.jxconfig.validator.ConstraintValidator;
+import java.lang.annotation.Annotation;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class ConstraintValidatorTest {
+    private static final String TEST_RESOURCES_DIR = System.getProperty("user.dir") + "/src/test/resources/";
+
+    private final ConfigFactory.Builder builder = ConfigFactory.builder(TEST_RESOURCES_DIR + "config");
+
+    @BeforeEach
+    void ensureTestConfigurationDirectoryExists() {
+        assertTrue(
+            Files.isDirectory(Paths.get(TEST_RESOURCES_DIR + "config")),
+            "Test configurations directory does not exist"
+        );
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface Min {
+        int value();
+    }
+
+    public static class MinValidator implements ConstraintValidator<Min, Integer> {
+        @Override
+        public boolean validate(Min annotation, Integer value) {
+            return value >= annotation.value();
+        }
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface Max {
+        int value();
+    }
+
+    public static class MaxValidator implements ConstraintValidator<Max, Integer> {
+        @Override
+        public boolean validate(Max annotation, Integer value) {
+            return value <= annotation.value();
+        }
+    }
+
+    @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
+    public record ValidatableConfiguration(
+        @ConfigProperty(name = "ByteProperty")
+        @Min(100)
+        int byteProperty,
+
+        @ConfigProperty(name = "ShortProperty")
+        @Max(65535)
+        int shortProperty
+    ) {
+    }
+
+    @Test
+    void validConfigurations_ShouldBeCreatedSuccessfully() {
+        var factory = builder
+            .withConstraintValidator(new MinValidator())
+            .withConstraintValidator(new MaxValidator())
+            .build();
+        var config = factory.createConfig(ValidatableConfiguration.class);
+
+        assertEquals(126, config.byteProperty());
+        assertEquals(16584, config.shortProperty());
+    }
+
+    @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
+    public record ConstraintViolatingConfiguration(
+        @ConfigProperty(name = "ByteProperty")
+        @Min(127)
+        int byteProperty
+    ) {
+    }
+
+    @Test
+    void onViolatedConstraints_ShouldThrow() {
+        var factory = builder.withConstraintValidator(new MinValidator()).build();
+
+        assertThrows(
+            ConfigurationBuildException.class,
+            () -> factory.createConfig(ConstraintViolatingConfiguration.class)
+        );
+    }
+
+    @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
+    public record InvalidConstraintApplicationConfiguration(
+        @ConfigProperty(name = "StringProperty")
+        @Min(100)
+        String stringProperty
+    ) {
+    }
+
+    @Test
+    void onInvalidConstraintApplication_ShouldThrow() {
+        var factory = builder.withConstraintValidator(new MinValidator()).build();
+
+        assertThrows(
+            ConfigurationBuildException.class,
+            () -> factory.createConfig(InvalidConstraintApplicationConfiguration.class)
+        );
+    }
+
+    @Test
+    void onDuplicateValidatorRegistration_ShouldThrow() {
+        builder.withConstraintValidator(new MinValidator());
+
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> builder.withConstraintValidator(new MinValidator())
+        );
+    }
+
+    public interface NonValidatorInterface<T> {
+    }
+
+    public static class NonValidatorType extends MinValidator implements NonValidatorInterface<String> {
+    }
+
+    @Test
+    void onRegisteringNonValidatorType_ShouldThrow() {
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> builder.withConstraintValidator(new NonValidatorType())
+        );
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static class RawValidatorType implements ConstraintValidator {
+        @Override
+        public boolean validate(Annotation annotation, Object value) {
+            return false;
+        }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void onRegisteringRawValidatorType_ShouldThrow() {
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> builder.withConstraintValidator(new RawValidatorType())
+        );
+    }
+}

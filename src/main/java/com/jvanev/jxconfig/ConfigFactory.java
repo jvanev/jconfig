@@ -17,22 +17,32 @@ package com.jvanev.jxconfig;
 
 import com.jvanev.jxconfig.annotation.ConfigFile;
 import com.jvanev.jxconfig.annotation.ConfigGroup;
-import com.jvanev.jxconfig.converter.IValueConverter;
-import com.jvanev.jxconfig.converter.internal.ValueConverter;
+import com.jvanev.jxconfig.annotation.ConfigProperty;
+import com.jvanev.jxconfig.converter.ValueConverter;
+import com.jvanev.jxconfig.converter.internal.Converter;
 import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import com.jvanev.jxconfig.exception.InvalidDeclarationException;
+import com.jvanev.jxconfig.exception.ValidationException;
 import com.jvanev.jxconfig.exception.ValueConversionException;
 import com.jvanev.jxconfig.internal.ReflectionUtil;
 import com.jvanev.jxconfig.resolver.DependencyChecker;
 import com.jvanev.jxconfig.resolver.internal.ValueResolver;
+import com.jvanev.jxconfig.validator.ConstraintValidator;
+import com.jvanev.jxconfig.validator.internal.ValidationPair;
+import com.jvanev.jxconfig.validator.internal.Validator;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.function.Predicate;
 
 /**
  * A type-safe configuration factory responsible for producing fully initialized configuration objects.
@@ -46,14 +56,30 @@ import java.util.Properties;
 public final class ConfigFactory {
     private final Path configurationDirectory;
 
-    private final ValueConverter converter;
+    private final Converter converter;
 
+    /**
+     * The constraints validation mechanism. Might be {@code null}, indicating that no
+     * validators has been registered.
+     */
+    private final Validator validator;
+
+    /**
+     * The additional dependency checking mechanism. Might be {@code null}, indicating that no
+     * checker has been registered.
+     */
     private final DependencyChecker checker;
 
     // Instances of the factory are obtained through the dedicated builder
-    private ConfigFactory(String configurationDirectory, ValueConverter converter, DependencyChecker checker) {
+    private ConfigFactory(
+        String configurationDirectory,
+        Converter converter,
+        Validator validator,
+        DependencyChecker checker
+    ) {
         this.configurationDirectory = Path.of(configurationDirectory);
         this.converter = converter;
+        this.validator = validator;
         this.checker = checker;
     }
 
@@ -224,6 +250,18 @@ public final class ConfigFactory {
                         e
                     );
                 }
+
+                if (validator != null) {
+                    try {
+                        validator.validateConstraints(parameter.getDeclaredAnnotations(), arguments[i]);
+                    } catch (Exception e) {
+                        throw new ValidationException(
+                            "Failed to validate the converted value for configuration property %s (%s.%s)"
+                                .formatted(property.name(), type.getSimpleName(), parameter.getName()),
+                            e
+                        );
+                    }
+                }
             }
         }
 
@@ -293,9 +331,18 @@ public final class ConfigFactory {
      * This class is responsible for building immutable instances of {@link ConfigFactory}.
      */
     public static class Builder {
+        /**
+         * A predicate to find the {@link ConstraintValidator} interface of a validator during registration.
+         */
+        private static final Predicate<Type> VALIDATOR_INTERFACE_PREDICATE = type ->
+            type instanceof ParameterizedType parameterizedType &&
+                parameterizedType.getRawType() == ConstraintValidator.class;
+
         private final String configurationDirectory;
 
-        private final Map<Class<?>, IValueConverter> converters = new LinkedHashMap<>();
+        private final Map<Class<?>, ValueConverter> converters = new LinkedHashMap<>();
+
+        private Map<Class<? extends Annotation>, ValidationPair> validators = null;
 
         private DependencyChecker dependencyChecker = null;
 
@@ -315,7 +362,7 @@ public final class ConfigFactory {
          *
          * @return This builder.
          */
-        public Builder withConverter(Class<?> type, IValueConverter converter) {
+        public Builder withConverter(Class<?> type, ValueConverter converter) {
             if (converters.containsKey(type)) {
                 throw new IllegalArgumentException("Duplicate converter found for type " + type.getSimpleName());
             }
@@ -340,18 +387,64 @@ public final class ConfigFactory {
         }
 
         /**
+         * Registers a validator that will be used to validate the resolved values of configuration
+         * properties annotated with its supported annotation. The validator is invoked after the
+         * resolved value has been converted to the type of the {@link ConfigProperty}-annotated
+         * parameter.
+         *
+         * @param validator The constraint validator to be registered
+         *
+         * @return This builder
+         */
+        @SuppressWarnings("unchecked")
+        public Builder withConstraintValidator(ConstraintValidator<? extends Annotation, ?> validator) {
+            if (validators == null) {
+                validators = new LinkedHashMap<>();
+            }
+
+            var constraintValidator = Arrays.stream(validator.getClass().getGenericInterfaces())
+                .filter(VALIDATOR_INTERFACE_PREDICATE)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                    validator.getClass().getSimpleName() + " does not implement ConstraintValidator"
+                ));
+            var typeArguments = ((ParameterizedType) constraintValidator).getActualTypeArguments();
+            var constraint = (Class<Annotation>) typeArguments[0];
+            var valueType = (Class<?>) typeArguments[1];
+            var pair = new ValidationPair(validator, valueType);
+
+            if (validators.putIfAbsent(constraint, pair) != null) {
+                throw new IllegalArgumentException(
+                    "Duplicate constraint registration for %s by %s. %s is already registered by %s."
+                        .formatted(
+                            constraint.getSimpleName(), validator.getClass().getSimpleName(),
+                            constraint.getSimpleName(), validators.get(constraint).getClass().getSimpleName()
+                        )
+                );
+            }
+
+            return this;
+        }
+
+        /**
          * Builds a new instance of {@link ConfigFactory} set up in the context of this builder.
          *
          * @return The fully initialized {@link ConfigFactory} object.
          */
         public ConfigFactory build() {
-            var converter = new ValueConverter();
+            var converter = new Converter();
 
             for (var set : converters.entrySet()) {
                 converter.addValueConverter(set.getKey(), set.getValue());
             }
 
-            return new ConfigFactory(configurationDirectory, converter, dependencyChecker);
+            Validator validator = null;
+
+            if (validators != null) {
+                validator = new Validator(validators);
+            }
+
+            return new ConfigFactory(configurationDirectory, converter, validator, dependencyChecker);
         }
     }
 }
