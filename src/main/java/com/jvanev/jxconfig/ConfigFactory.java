@@ -28,6 +28,7 @@ import com.jvanev.jxconfig.internal.ReflectionUtil;
 import com.jvanev.jxconfig.resolver.DependencyChecker;
 import com.jvanev.jxconfig.resolver.internal.ValueResolver;
 import com.jvanev.jxconfig.validator.ConstraintValidator;
+import com.jvanev.jxconfig.validator.ValidationBridge;
 import com.jvanev.jxconfig.validator.internal.ValidationPair;
 import com.jvanev.jxconfig.validator.internal.Validator;
 import java.io.IOException;
@@ -39,9 +40,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.function.Predicate;
 
 /**
@@ -344,6 +347,8 @@ public final class ConfigFactory {
 
         private Map<Class<? extends Annotation>, ValidationPair> validators = null;
 
+        private Set<ValidationBridge> bridges = null;
+
         private DependencyChecker dependencyChecker = null;
 
         // Instantiable by the builder method only
@@ -427,6 +432,27 @@ public final class ConfigFactory {
         }
 
         /**
+         * Registers a validation bridge that delegates the constraint validations to an external service.
+         *
+         * @param bridge The bridge to an external constraints validator
+         *
+         * @return This builder.
+         */
+        public Builder withValidationBridge(ValidationBridge bridge) {
+            if (bridges == null) {
+                bridges = new HashSet<>();
+            }
+
+            if (!bridges.add(bridge)) {
+                throw new IllegalArgumentException(
+                    "Bridge " + bridge.getClass().getSimpleName() + " is already registered"
+                );
+            }
+
+            return this;
+        }
+
+        /**
          * Builds a new instance of {@link ConfigFactory} set up in the context of this builder.
          *
          * @return The fully initialized {@link ConfigFactory} object.
@@ -440,8 +466,8 @@ public final class ConfigFactory {
 
             Validator validator = null;
 
-            if (validators != null) {
-                validator = new Validator(validators);
+            if (validators != null || bridges != null) {
+                validator = new Validator(bridges, validators);
             }
 
             return new ConfigFactory(configurationDirectory, converter, validator, dependencyChecker);

@@ -19,14 +19,17 @@ import com.jvanev.jxconfig.annotation.ConfigFile;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
 import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import com.jvanev.jxconfig.validator.ConstraintValidator;
+import com.jvanev.jxconfig.validator.ValidationBridge;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -167,5 +170,137 @@ class ConstraintValidatorTest {
             IllegalArgumentException.class,
             () -> builder.withConstraintValidator(new RawValidatorType())
         );
+    }
+
+    @Nested
+    class ValidationBridgeTests {
+        private ConfigFactory factory;
+
+        @BeforeEach
+        void setUp() {
+            factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config")
+                .withValidationBridge(new ExternalValidator())
+                .withValidationBridge(new SecondExternalValidator())
+                .build();
+        }
+
+        @Retention(RetentionPolicy.RUNTIME)
+        public @interface Range {
+            int min();
+
+            int max();
+        }
+
+        @Retention(RetentionPolicy.RUNTIME)
+        public @interface IntSet {
+            int[] value();
+        }
+
+        static class ExternalValidator implements ValidationBridge {
+            @Override
+            public boolean validate(Annotation[] annotations, Object value) {
+                for (var annotation : annotations) {
+                    if (annotation.annotationType() == Range.class) {
+                        var intVal = (int) value;
+                        var range = (Range) annotation;
+
+                        return intVal >= range.min() && intVal <= range.max();
+                    }
+
+                    if (annotation.annotationType() == IntSet.class) {
+                        var intArray = (int[]) value;
+                        var inSet = (IntSet) annotation;
+
+                        for (var intElement : intArray) {
+                            for (var setElement : inSet.value()) {
+                                if (intElement == setElement) {
+                                    return true;
+                                }
+                            }
+                        }
+
+                        throw new IllegalArgumentException("Not in set");
+                    }
+                }
+
+                return true;
+            }
+        }
+
+        static class SecondExternalValidator implements ValidationBridge {
+            @Override
+            public boolean validate(Annotation[] annotations, Object value) {
+                return true;
+            }
+        }
+
+        @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
+        public record ValidatableConfiguration(
+            @ConfigProperty(name = "ByteProperty")
+            @Range(min = 1, max = 127)
+            int byteProperty,
+
+            @ConfigProperty(name = "IntegerSetProperty")
+            @IntSet({1, 3, 5, 7, 9})
+            int[] shortProperty
+        ) {
+        }
+
+        @Test
+        void afterSuccessfulRegistration_ShouldBeUsedForValidation() {
+            assertDoesNotThrow(() -> factory.createConfig(ValidatableConfiguration.class));
+        }
+
+        @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
+        public record NonValidatableConfiguration(
+            @ConfigProperty(name = "ByteProperty")
+            @Range(min = 127, max = 256)
+            int byteProperty,
+
+            @ConfigProperty(name = "IntegerSetProperty")
+            @IntSet({1, 3, 5, 7, 9})
+            int[] shortProperty
+        ) {
+        }
+
+        @Test
+        void onBooleanFailure_ShouldThrowGenericException() {
+            assertThrows(
+                ConfigurationBuildException.class,
+                () -> factory.createConfig(NonValidatableConfiguration.class)
+            );
+        }
+
+        @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
+        public record SecondNonValidatableConfiguration(
+            @ConfigProperty(name = "ByteProperty")
+            @Range(min = 0, max = 256)
+            int byteProperty,
+
+            @ConfigProperty(name = "IntegerSetProperty")
+            @IntSet({-1, -2, -3, -4, -5})
+            int[] shortProperty
+        ) {
+        }
+
+        @Test
+        void onValidationException_ShouldRethrow() {
+            assertThrows(
+                ConfigurationBuildException.class,
+                () -> factory.createConfig(SecondNonValidatableConfiguration.class)
+            );
+        }
+
+        @Test
+        void registeringAlreadyRegisteredValidator_ShouldThrow() {
+            var validator = new ExternalValidator();
+            var builder = ConfigFactory.builder(TEST_RESOURCES_DIR + "config")
+                .withValidationBridge(validator);
+
+            assertThrows(
+                IllegalArgumentException.class,
+                () -> builder.withValidationBridge(validator)
+            );
+        }
     }
 }

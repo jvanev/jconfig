@@ -18,25 +18,42 @@ package com.jvanev.jxconfig.validator.internal;
 import com.jvanev.jxconfig.exception.ConstraintViolationException;
 import com.jvanev.jxconfig.exception.InvalidDeclarationException;
 import com.jvanev.jxconfig.validator.ConstraintValidator;
+import com.jvanev.jxconfig.validator.ValidationBridge;
 import java.lang.annotation.Annotation;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * A mechanism for annotation-based constraint validation.
  */
 public final class Validator {
     /**
+     * A registry of bridges to external validation services.
+     * Might be {@code null}, which indicates that we're dealing with user-defined validators only.
+     */
+    private final Set<ValidationBridge> bridges;
+
+    /**
      * A registry of validators mapped to the annotation they use to validate their values.
+     * Might be {@code null}, which indicates that the validation has been delegated to an external service.
      */
     private final Map<Class<? extends Annotation>, ValidationPair> validators;
+
+    private final boolean hasBridges;
+
+    private final boolean hasValidators;
 
     /**
      * Creates a new Validator.
      *
+     * @param bridges    The bridges to services handling the constraint validations
      * @param validators The constraint validators to be used during the validation process
      */
-    public Validator(Map<Class<? extends Annotation>, ValidationPair> validators) {
+    public Validator(Set<ValidationBridge> bridges, Map<Class<? extends Annotation>, ValidationPair> validators) {
+        this.bridges = bridges;
         this.validators = validators;
+        this.hasBridges = bridges != null && !bridges.isEmpty();
+        this.hasValidators = validators != null && !validators.isEmpty();
     }
 
     /**
@@ -47,8 +64,26 @@ public final class Validator {
      *
      * @throws ConstraintViolationException If the value is constrained and the constraints have been violated.
      */
-    @SuppressWarnings("unchecked")
     public void validateConstraints(Annotation[] annotations, Object value) {
+        if (hasValidators) {
+            withValidators(annotations, value);
+        }
+
+        if (hasBridges) {
+            withValidationBridges(annotations, value);
+        }
+    }
+
+    /**
+     * Uses the registered validators to validate the specified value against the specified annotations.
+     *
+     * @param annotations The array containing potential constraints
+     * @param value       The value to be validated
+     *
+     * @throws ConstraintViolationException If the value is constrained and the constraints have been violated.
+     */
+    @SuppressWarnings("unchecked")
+    private void withValidators(Annotation[] annotations, Object value) {
         for (Annotation annotation : annotations) {
             var pair = validators.get(annotation.annotationType());
 
@@ -56,8 +91,8 @@ public final class Validator {
                 if (pair.valueType().isAssignableFrom(value.getClass())) {
                     if (!((ConstraintValidator<Annotation, Object>) pair.validator()).validate(annotation, value)) {
                         throw new ConstraintViolationException(
-                            "Value '" + value + "' violates the constraints set by " +
-                                annotation.annotationType().getSimpleName()
+                            "Value '" + value + "' of type " + value.getClass() +
+                                " violates the constraints set by " + annotation.annotationType().getSimpleName()
                         );
                     }
                 } else {
@@ -68,6 +103,26 @@ public final class Validator {
                             value.getClass().getSimpleName()
                     );
                 }
+            }
+        }
+    }
+
+    /**
+     * Delegates the constraint validations to all registered bridges.
+     *
+     * @param annotations The array containing potential constraints
+     * @param value       The value to be validated
+     *
+     * @throws ConstraintViolationException If the external service decides to return a constraint violation flag,
+     *                                      instead of throwing an exception.
+     */
+    private void withValidationBridges(Annotation[] annotations, Object value) {
+        for (var bridge : bridges) {
+            if (!bridge.validate(annotations, value)) {
+                throw new ConstraintViolationException(
+                    "Value '" + value + "' of type " + value.getClass() +
+                        " violates the constraints set by bridge " + bridge.getClass().getSimpleName()
+                );
             }
         }
     }
