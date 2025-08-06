@@ -20,6 +20,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,16 +36,26 @@ final class AggregateTypeUtil {
     /**
      * Contains string-to-primitive array converters mapped to the type of array they produce.
      */
-    private static final Map<Class<?>, Function<String, Object>> PRIMITIVE_ARRAY_CONVERTERS = Map.of(
-        byte[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(byte.class, value),
-        short[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(short.class, value),
-        int[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(int.class, value),
-        long[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(long.class, value),
-        float[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(float.class, value),
-        double[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(double.class, value),
-        boolean[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(boolean.class, value),
-        char[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(char.class, value)
-    );
+    private static final Map<Class<?>, Function<String, Object>> PRIMITIVE_ARRAY_CONVERTERS = new HashMap<>();
+
+    static {
+        PRIMITIVE_ARRAY_CONVERTERS.put(byte[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(byte.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(Byte[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(Byte.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(short[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(short.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(Short[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(Short.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(int[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(int.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(Integer[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(Integer.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(long[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(long.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(Long[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(Long.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(float[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(float.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(Float[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(Float.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(double[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(double.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(Double[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(Double.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(boolean[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(boolean.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(Boolean[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(Boolean.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(char[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(char.class, value));
+        PRIMITIVE_ARRAY_CONVERTERS.put(Character[].class, value -> AggregateTypeUtil.convertToPrimitiveArray(Character.class, value));
+    }
 
     /**
      * Regex to split strings by commas (e.g., 1, 2, 3). Any space around the comma will be trimmed.
