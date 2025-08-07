@@ -27,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -49,17 +50,27 @@ class DependencyConfigurationTest {
     class ValidDependencyDeclarationTests {
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record BasicDependencyConfiguration(
-            @ConfigProperty(name = "BooleanTrueProperty")
+            // Tests whether the value will be correctly read from te fallback key when the dependency is not satisfied
+            @ConfigProperty(key = "ProdURL", fallbackKey = "DevURL")
+            @DependsOn(key = "Environment", value = "prod")
+            String prodUrl,
+
+            // Tests whether the value will be correctly read from the primary key when the dependency is satisfied
+            @ConfigProperty(key = "DevURL", fallbackKey = "ProdURL")
+            @DependsOn(key = "Environment", value = "dev")
+            String devUrl,
+
+            @ConfigProperty(key = "BooleanTrueProperty")
             boolean booleanTrueProperty,
 
-            @ConfigProperty(name = "BooleanFalseProperty")
+            @ConfigProperty(key = "BooleanFalseProperty")
             boolean booleanFalseProperty,
 
-            @ConfigProperty(name = "IntegerPropertyOne", defaultValue = "0")
+            @ConfigProperty(key = "IntegerPropertyOne", defaultValue = "0")
             @DependsOn(property = "BooleanTrueProperty")
             int integerPropertyWithSatisfiedDependency,
 
-            @ConfigProperty(name = "IntegerPropertyTwo", defaultValue = "0")
+            @ConfigProperty(key = "IntegerPropertyTwo", defaultValue = "0")
             @DependsOn(property = "BooleanFalseProperty")
             int integerPropertyWithUnsatisfiedDependency
         ) {
@@ -67,14 +78,14 @@ class DependencyConfigurationTest {
 
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record IndirectSatisfiedDependencyConfiguration(
-            @ConfigProperty(name = "BooleanTrueProperty")
+            @ConfigProperty(key = "BooleanTrueProperty")
             boolean booleanTrueProperty,
 
-            @ConfigProperty(name = "ConfigurationB", defaultValue = "false")
+            @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
             @DependsOn(property = "BooleanTrueProperty")
             boolean configB,
 
-            @ConfigProperty(name = "ConfigurationC", defaultValue = "false")
+            @ConfigProperty(key = "ConfigurationC", defaultValue = "false")
             @DependsOn(property = "ConfigurationB")
             boolean configC
         ) {
@@ -82,14 +93,14 @@ class DependencyConfigurationTest {
 
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record IndirectUnsatisfiedDependencyConfiguration(
-            @ConfigProperty(name = "ConfigurationA")
+            @ConfigProperty(key = "ConfigurationA")
             boolean configA,
 
-            @ConfigProperty(name = "ConfigurationB", defaultValue = "false")
+            @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
             @DependsOn(property = "ConfigurationA")
             boolean configB,
 
-            @ConfigProperty(name = "ConfigurationC", defaultValue = "false")
+            @ConfigProperty(key = "ConfigurationC", defaultValue = "false")
             @DependsOn(property = "ConfigurationB")
             boolean configC
         ) {
@@ -97,22 +108,22 @@ class DependencyConfigurationTest {
 
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record IndirectMixedSatisfiedDependencyConfiguration(
-            @ConfigProperty(name = "ConfigurationB")
+            @ConfigProperty(key = "ConfigurationB")
             boolean configB,
 
-            @ConfigProperty(name = "ConfigurationC", defaultValue = "false")
+            @ConfigProperty(key = "ConfigurationC", defaultValue = "false")
             @DependsOn(property = "ConfigurationB")
             boolean configC,
 
-            @ConfigProperty(name = "ConfigurationD", defaultValue = "false")
+            @ConfigProperty(key = "ConfigurationD", defaultValue = "false")
             @DependsOn(property = "ConfigurationC")
             boolean configD,
 
-            @ConfigProperty(name = "ConfigurationE", defaultValue = "false")
+            @ConfigProperty(key = "ConfigurationE", defaultValue = "false")
             @DependsOn(property = "ConfigurationD")
             boolean configE,
 
-            @ConfigProperty(name = "ConfigurationF", defaultValue = "false")
+            @ConfigProperty(key = "ConfigurationF", defaultValue = "false")
             @DependsOn(property = "ConfigurationE")
             boolean configF
         ) {
@@ -120,14 +131,14 @@ class DependencyConfigurationTest {
 
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record DefaultValueSatisfyingDependencyConfiguration(
-            @ConfigProperty(name = "BooleanFalseProperty")
+            @ConfigProperty(key = "BooleanFalseProperty")
             boolean booleanFalseProperty,
 
-            @ConfigProperty(name = "IntegerPropertyTwo", defaultValue = "0")
+            @ConfigProperty(key = "IntegerPropertyTwo", defaultValue = "0")
             @DependsOn(property = "BooleanFalseProperty")
             int integerPropertyTwo,
 
-            @ConfigProperty(name = "ConfigurationB", defaultValue = "false")
+            @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
             @DependsOn(property = "IntegerPropertyTwo", value = "0")
             boolean configB
         ) {
@@ -135,14 +146,14 @@ class DependencyConfigurationTest {
 
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record TwoKeysDependingOnTheSameSatisfiedDependency(
-            @ConfigProperty(name = "BooleanTrueProperty")
+            @ConfigProperty(key = "BooleanTrueProperty")
             boolean booleanTrue,
 
-            @ConfigProperty(name = "IntegerPropertyOne", defaultValue = "0")
+            @ConfigProperty(key = "IntegerPropertyOne", defaultValue = "0")
             @DependsOn(property = "BooleanTrueProperty")
             int integerPropertyOne,
 
-            @ConfigProperty(name = "IntegerPropertyTwo", defaultValue = "0")
+            @ConfigProperty(key = "IntegerPropertyTwo", defaultValue = "0")
             @DependsOn(property = "BooleanTrueProperty")
             int integerPropertyTwo
         ) {
@@ -150,14 +161,14 @@ class DependencyConfigurationTest {
 
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record TwoKeysDependingOnTheSameUnsatisfiedDependency(
-            @ConfigProperty(name = "BooleanFalseProperty")
+            @ConfigProperty(key = "BooleanFalseProperty")
             boolean booleanTrue,
 
-            @ConfigProperty(name = "IntegerPropertyOne", defaultValue = "0")
+            @ConfigProperty(key = "IntegerPropertyOne", defaultValue = "0")
             @DependsOn(property = "BooleanFalseProperty")
             int integerPropertyOne,
 
-            @ConfigProperty(name = "IntegerPropertyTwo", defaultValue = "0")
+            @ConfigProperty(key = "IntegerPropertyTwo", defaultValue = "0")
             @DependsOn(property = "BooleanFalseProperty")
             int integerPropertyTwo
         ) {
@@ -167,14 +178,20 @@ class DependencyConfigurationTest {
         void dependentDeclarationWithSatisfiedDependency_ShouldReadFromFile() {
             var config = factory.createConfig(BasicDependencyConfiguration.class);
 
-            assertEquals(65535, config.integerPropertyWithSatisfiedDependency());
+            assertAll(
+                () -> assertEquals(65535, config.integerPropertyWithSatisfiedDependency()),
+                () -> assertEquals("https://dev.example.com/", config.devUrl())
+            );
         }
 
         @Test
         void dependentDeclarationWithUnsatisfiedDependency_ShouldReadDefaultValue() {
             var config = factory.createConfig(BasicDependencyConfiguration.class);
 
-            assertEquals(0, config.integerPropertyWithUnsatisfiedDependency());
+            assertAll(
+                () -> assertEquals(0, config.integerPropertyWithUnsatisfiedDependency()),
+                () -> assertEquals("https://dev.example.com/", config.prodUrl())
+            );
         }
 
         @Test
@@ -236,30 +253,49 @@ class DependencyConfigurationTest {
     class InvalidDependencyDeclarationTests {
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record DependencyWithNoDefaultValue(
-            @ConfigProperty(name = "UndefinedProperty", defaultValue = "false")
+            @ConfigProperty(key = "UndefinedProperty", defaultValue = "false")
             boolean booleanProperty,
 
-            @ConfigProperty(name = "IntegerPropertyOne")
+            @ConfigProperty(key = "IntegerPropertyOne")
             @DependsOn(property = "BooleanProperty")
             int integerProperty
         ) {
         }
 
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
-        public record DependingOnNonExistentConfiguration(
-            @ConfigProperty(name = "BooleanProperty", defaultValue = "false")
+        public record DependingOnNonExistentConfigurationProperty(
+            @ConfigProperty(key = "BooleanProperty", defaultValue = "false")
             @DependsOn(property = "NonExistent")
             boolean booleanProperty
         ) {
         }
 
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
+        public record DependingOnNonExistentConfigurationKey(
+            @ConfigProperty(key = "BooleanProperty", defaultValue = "false")
+            @DependsOn(key = "NonExistent")
+            boolean booleanProperty
+        ) {
+        }
+
+        @ConfigFile(filename = "DependencyTestConfiguration.properties")
+        public record DependingOnConfigurationPropertyAndConfigurationKey(
+            @ConfigProperty(key = "IntegerPropertyOne")
+            int integerProperty,
+
+            @ConfigProperty(key = "BooleanProperty", defaultValue = "false")
+            @DependsOn(key = "IntegerPropertyTwo", property = "IntegerPropertyOne")
+            boolean booleanProperty
+        ) {
+        }
+
+        @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record CircularDependencyGraph(
-            @ConfigProperty(name = "BooleanTrueProperty", defaultValue = "false")
+            @ConfigProperty(key = "BooleanTrueProperty", defaultValue = "false")
             @DependsOn(property = "IntegerPropertyOne", value = "65535")
             boolean booleanProperty,
 
-            @ConfigProperty(name = "IntegerPropertyOne", defaultValue = "0")
+            @ConfigProperty(key = "IntegerPropertyOne", defaultValue = "0")
             @DependsOn(property = "BooleanTrueProperty")
             int integerProperty
         ) {
@@ -274,10 +310,26 @@ class DependencyConfigurationTest {
         }
 
         @Test
-        void dependingOnNonExistentParameter_ShouldThrow() {
+        void dependingOnNonExistentProperty_ShouldThrow() {
             assertThrows(
                 ConfigurationBuildException.class,
-                () -> factory.createConfig(DependingOnNonExistentConfiguration.class)
+                () -> factory.createConfig(DependingOnNonExistentConfigurationProperty.class)
+            );
+        }
+
+        @Test
+        void dependingOnNonExistentKey_ShouldThrow() {
+            assertThrows(
+                ConfigurationBuildException.class,
+                () -> factory.createConfig(DependingOnNonExistentConfigurationKey.class)
+            );
+        }
+
+        @Test
+        void dependingOnConfigurationPropertyAndConfigurationKey_ShouldThrow() {
+            assertThrows(
+                ConfigurationBuildException.class,
+                () -> factory.createConfig(DependingOnConfigurationPropertyAndConfigurationKey.class)
             );
         }
 
@@ -323,44 +375,38 @@ class DependencyConfigurationTest {
 
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record DependencyConfiguration(
-            @ConfigProperty(name = "IntegerPropertyOne")
+            @ConfigProperty(key = "IntegerPropertyOne")
             int integerPropertyOne,
 
-            @ConfigProperty(name = "IntegerPropertyTwo")
-            int integerPropertyTwo,
-
-            @ConfigProperty(name = "LogLevel")
-            System.Logger.Level logLevel,
-
-            @ConfigProperty(name = "ConfigurationB", defaultValue = "false")
+            @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
             @DependsOn(property = "IntegerPropertyOne", operator = ">", value = "65534")
             boolean configurationB,
 
-            @ConfigProperty(name = "ConfigurationC", defaultValue = "false")
-            @DependsOn(property = "IntegerPropertyTwo", operator = "<", value = "65536")
+            @ConfigProperty(key = "ConfigurationC", defaultValue = "false")
+            @DependsOn(key = "IntegerPropertyTwo", operator = "<", value = "65536")
             boolean configurationC,
 
-            @ConfigProperty(name = "ConfigurationE", defaultValue = "false")
-            @DependsOn(property = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
+            @ConfigProperty(key = "ConfigurationE", defaultValue = "false")
+            @DependsOn(key = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
             boolean configurationE,
 
-            @ConfigProperty(name = "ConfigurationF", defaultValue = "false")
-            @DependsOn(property = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
+            @ConfigProperty(key = "ConfigurationF", defaultValue = "false")
+            @DependsOn(key = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
             boolean configurationF,
 
             @ConfigGroup
-            @DependsOn(property = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
+            @DependsOn(key = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
             ConfigurationGroup configGroup1,
 
             @ConfigGroup
-            @DependsOn(property = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
+            @DependsOn(key = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
             ConfigurationGroup configGroup2
         ) {
             public record ConfigurationGroup(
-                @ConfigProperty(name = "ConfigurationB", defaultValue = "false")
+                @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
                 boolean configurationB,
 
-                @ConfigProperty(name = "ConfigurationC", defaultValue = "false")
+                @ConfigProperty(key = "ConfigurationC", defaultValue = "false")
                 boolean configurationC
             ) {
             }
@@ -392,7 +438,7 @@ class DependencyConfigurationTest {
 
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record DependencyConfigurationAlt(
-            @ConfigProperty(name = "LogLevel")
+            @ConfigProperty(key = "LogLevel")
             System.Logger.Level logLevel,
 
             @ConfigGroup
@@ -400,7 +446,7 @@ class DependencyConfigurationTest {
             ConfigurationGroup configGroup1
         ) {
             public record ConfigurationGroup(
-                @ConfigProperty(name = "ConfigurationB", defaultValue = "false")
+                @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
                 boolean configurationB
             ) {
             }

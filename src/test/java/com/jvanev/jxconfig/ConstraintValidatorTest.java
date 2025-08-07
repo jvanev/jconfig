@@ -73,11 +73,11 @@ class ConstraintValidatorTest {
 
     @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
     public record ValidatableConfiguration(
-        @ConfigProperty(name = "ByteProperty")
+        @ConfigProperty(key = "ByteProperty")
         @Min(100)
         int byteProperty,
 
-        @ConfigProperty(name = "ShortProperty")
+        @ConfigProperty(key = "ShortProperty")
         @Max(65535)
         int shortProperty
     ) {
@@ -97,7 +97,7 @@ class ConstraintValidatorTest {
 
     @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
     public record ConstraintViolatingConfiguration(
-        @ConfigProperty(name = "ByteProperty")
+        @ConfigProperty(key = "ByteProperty")
         @Min(127)
         int byteProperty
     ) {
@@ -115,7 +115,7 @@ class ConstraintValidatorTest {
 
     @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
     public record InvalidConstraintApplicationConfiguration(
-        @ConfigProperty(name = "StringProperty")
+        @ConfigProperty(key = "StringProperty")
         @Min(100)
         String stringProperty
     ) {
@@ -236,11 +236,11 @@ class ConstraintValidatorTest {
 
         @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
         public record ValidatableConfiguration(
-            @ConfigProperty(name = "ByteProperty")
+            @ConfigProperty(key = "ByteProperty")
             @Range(min = 1, max = 127)
             int byteProperty,
 
-            @ConfigProperty(name = "IntegerSetProperty")
+            @ConfigProperty(key = "IntegerSetProperty")
             @IntSet({1, 3, 5, 7, 9})
             int[] shortProperty
         ) {
@@ -253,11 +253,11 @@ class ConstraintValidatorTest {
 
         @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
         public record NonValidatableConfiguration(
-            @ConfigProperty(name = "ByteProperty")
+            @ConfigProperty(key = "ByteProperty")
             @Range(min = 127, max = 256)
             int byteProperty,
 
-            @ConfigProperty(name = "IntegerSetProperty")
+            @ConfigProperty(key = "IntegerSetProperty")
             @IntSet({1, 3, 5, 7, 9})
             int[] shortProperty
         ) {
@@ -273,11 +273,11 @@ class ConstraintValidatorTest {
 
         @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
         public record SecondNonValidatableConfiguration(
-            @ConfigProperty(name = "ByteProperty")
+            @ConfigProperty(key = "ByteProperty")
             @Range(min = 0, max = 256)
             int byteProperty,
 
-            @ConfigProperty(name = "IntegerSetProperty")
+            @ConfigProperty(key = "IntegerSetProperty")
             @IntSet({-1, -2, -3, -4, -5})
             int[] shortProperty
         ) {

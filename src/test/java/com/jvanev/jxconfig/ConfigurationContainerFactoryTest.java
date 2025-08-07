@@ -46,20 +46,20 @@ class ConfigurationContainerFactoryTest {
 
     @ConfigFile(filename = "BaseTestConfiguration.properties")
     public record BaseConfiguration(
-        @ConfigProperty(name = "BooleanProperty")
+        @ConfigProperty(key = "BooleanProperty")
         boolean booleanProperty,
 
-        @ConfigProperty(name = "MissingProperty", defaultValue = "0xFF")
+        @ConfigProperty(key = "MissingProperty", defaultValue = "0xFF")
         int integerProperty
     ) {
     }
 
     @ConfigFile(filename = "GroupTestConfiguration.properties")
     public record GroupConfiguration(
-        @ConfigProperty(name = "EnabledDeveloperMode")
+        @ConfigProperty(key = "EnabledDeveloperMode")
         boolean enabledDevMode,
 
-        @ConfigProperty(name = "DisabledDeveloperMode")
+        @ConfigProperty(key = "DisabledDeveloperMode")
         boolean disabledDevMode,
 
         @ConfigGroup
@@ -71,13 +71,13 @@ class ConfigurationContainerFactoryTest {
         NestedConfiguration disabledConfig
     ) {
         public record NestedConfiguration(
-            @ConfigProperty(name = "LogTag", defaultValue = "I")
+            @ConfigProperty(key = "LogTag", defaultValue = "I")
             char logTag,
 
-            @ConfigProperty(name = "EnableCallTraces", defaultValue = "false")
+            @ConfigProperty(key = "EnableCallTraces", defaultValue = "false")
             boolean enableCallTraces,
 
-            @ConfigProperty(name = "ConnectionTimeout", defaultValue = "8")
+            @ConfigProperty(key = "ConnectionTimeout", defaultValue = "8")
             int timeout
         ) {
         }
@@ -85,51 +85,51 @@ class ConfigurationContainerFactoryTest {
 
     @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
     public record ValueConversionsConfiguration(
-        @ConfigProperty(name = "BooleanTrueProperty")
+        @ConfigProperty(key = "BooleanTrueProperty")
         boolean booleanTrueProperty,
 
-        @ConfigProperty(name = "BooleanFalseProperty")
+        @ConfigProperty(key = "BooleanFalseProperty")
         boolean booleanFalseProperty,
 
-        @ConfigProperty(name = "ByteProperty")
+        @ConfigProperty(key = "ByteProperty")
         byte byteProperty,
 
-        @ConfigProperty(name = "ShortProperty")
+        @ConfigProperty(key = "ShortProperty")
         short shortProperty,
 
-        @ConfigProperty(name = "IntegerProperty")
+        @ConfigProperty(key = "IntegerProperty")
         int intProperty,
 
-        @ConfigProperty(name = "HexIntegerProperty")
+        @ConfigProperty(key = "HexIntegerProperty")
         int hexIntProperty,
 
-        @ConfigProperty(name = "LongProperty")
+        @ConfigProperty(key = "LongProperty")
         long longProperty,
 
-        @ConfigProperty(name = "FloatProperty")
+        @ConfigProperty(key = "FloatProperty")
         float floatProperty,
 
-        @ConfigProperty(name = "DoubleProperty")
+        @ConfigProperty(key = "DoubleProperty")
         double doubleProperty,
 
-        @ConfigProperty(name = "CharProperty")
+        @ConfigProperty(key = "CharProperty")
         char charProperty
     ) {
     }
 
     @ConfigFile(filename = "DependencyTestConfiguration.properties")
     public record DependencyConfiguration(
-        @ConfigProperty(name = "BooleanTrueProperty")
+        @ConfigProperty(key = "BooleanTrueProperty")
         boolean booleanTrueProperty,
 
-        @ConfigProperty(name = "BooleanFalseProperty")
+        @ConfigProperty(key = "BooleanFalseProperty")
         boolean booleanFalseProperty,
 
-        @ConfigProperty(name = "IntegerPropertyOne", defaultValue = "0")
+        @ConfigProperty(key = "IntegerPropertyOne", defaultValue = "0")
         @DependsOn(property = "BooleanTrueProperty")
         int integerPropertyWithSatisfiedDependency,
 
-        @ConfigProperty(name = "IntegerPropertyTwo", defaultValue = "0")
+        @ConfigProperty(key = "IntegerPropertyTwo", defaultValue = "0")
         @DependsOn(property = "BooleanFalseProperty")
         int integerPropertyWithUnsatisfiedDependency
     ) {
@@ -211,10 +211,10 @@ class ConfigurationContainerFactoryTest {
 
     @ConfigFile(filename = "BaseTestConfiguration.properties")
     public record MultipleConstructorsConfiguration(
-        @ConfigProperty(name = "BooleanProperty")
+        @ConfigProperty(key = "BooleanProperty")
         boolean booleanProperty,
 
-        @ConfigProperty(name = "MissingProperty", defaultValue = "0xFF")
+        @ConfigProperty(key = "MissingProperty", defaultValue = "0xFF")
         int integerProperty
     ) {
         public MultipleConstructorsConfiguration(int integerProperty) {

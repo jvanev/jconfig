@@ -229,27 +229,27 @@ public final class ConfigFactory {
             } else {
                 var property = ReflectionUtil.getConfigProperty(type, parameter);
 
-                if (processedParameters.putIfAbsent(property.name(), parameter.getName()) != null) {
+                if (processedParameters.putIfAbsent(property.key(), parameter.getName()) != null) {
                     throw new InvalidDeclarationException(
                         "Configuration property '%s' declared on parameter %s.%s is also declared on parameter %s.%s"
                             .formatted(
-                                property.name(),
+                                property.key(),
                                 type.getSimpleName(), parameter.getName(),
-                                type.getSimpleName(), processedParameters.get(property.name())
+                                type.getSimpleName(), processedParameters.get(property.key())
                             )
                     );
                 }
 
                 var resolvedValue = context.isDependencySatisfied()
                     ? valueResolver.resolveValue(parameter)
-                    : property.defaultValue();
+                    : valueResolver.getDefaultValue(parameter);
 
                 try {
                     arguments[i] = converter.convert(parameter.getParameterizedType(), resolvedValue.trim());
                 } catch (Exception e) {
                     throw new ValueConversionException(
                         "Failed to convert the resolved value for configuration property %s (%s.%s)"
-                            .formatted(property.name(), type.getSimpleName(), parameter.getName()),
+                            .formatted(property.key(), type.getSimpleName(), parameter.getName()),
                         e
                     );
                 }
@@ -260,7 +260,7 @@ public final class ConfigFactory {
                     } catch (Exception e) {
                         throw new ValidationException(
                             "Failed to validate the converted value for configuration property %s (%s.%s)"
-                                .formatted(property.name(), type.getSimpleName(), parameter.getName()),
+                                .formatted(property.key(), type.getSimpleName(), parameter.getName()),
                             e
                         );
                     }

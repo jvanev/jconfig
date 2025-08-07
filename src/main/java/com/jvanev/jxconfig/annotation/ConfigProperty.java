@@ -38,14 +38,28 @@ public @interface ConfigProperty {
      *
      * @return The name of the corresponding key.
      */
-    String name();
+    String key();
+
+    /**
+     * The name of the key in the configuration file to be used as a fallback.
+     * The same resolution rules apply as for {@link #key()}.
+     * <p>
+     * Used if the configuration file doesn't contain a key with the specified {@link #key()},
+     * or if the parameter is additionally annotated with {@link DependsOn} and its condition
+     * is not satisfied.
+     *
+     * @return The name of the corresponding key.
+     */
+    String fallbackKey() default "";
 
     /**
      * The default value to be used if the configuration file doesn't contain a key
-     * with the specified {@link #name()}, or if {@link DependsOn} is declared and its condition is not satisfied.
+     * with the specified {@link #key()}, or if {@link DependsOn} is declared and its condition is not satisfied.
      * <p>
      * Defaults to an empty string. While this is suitable for some types (e.g., arrays and collections),
      * other types (like primitives and enums) require an explicitly specified default value.
+     * <p>
+     * <b>Should not be used if a {@link #fallbackKey()} is defined.</b>
      *
      * @return The default value for this property.
      */

@@ -41,13 +41,13 @@ PoolSize = 7
 ```java
 @ConfigFile(filename = "Database.properties")
 public record DatabaseConfig(
-    @ConfigProperty(name = "URL") String url,
-    @ConfigProperty(name = "User") String user,
-    @ConfigProperty(name = "Password") String password,
-    @ConfigProperty(name = "PoolSize") int poolSize,
+    @ConfigProperty(key = "URL") String url,
+    @ConfigProperty(key = "User") String user,
+    @ConfigProperty(key = "Password") String password,
+    @ConfigProperty(key = "PoolSize") int poolSize,
 
     // When no such key exists in the properties file, a defaultValue is required
-    @ConfigProperty(name = "NonExistent", defaultValue = "false") boolean nonExistent
+    @ConfigProperty(key = "NonExistent", defaultValue = "false") boolean nonExistent
 ) {}
 ```
 
@@ -120,7 +120,7 @@ LogTimestampFormat = yyyy-MM-dd HH:mm:ss.SSS
 ```java
 @ConfigFile(filename = "System.properties")
 public record SystemConfig(
-    @ConfigProperty(name = "LogTimestampFormat")
+    @ConfigProperty(key = "LogTimestampFormat")
     DateTimeFormatter logTimestampFormatter
 ) {}
 ```
@@ -166,7 +166,7 @@ RetryDelay = 5
 ```java
 @ConfigFile(filename = "System.properties")
 public record SystemConfig(
-    @ConfigProperty(name = "RetryDelay") long retryDelay
+    @ConfigProperty(key = "RetryDelay") long retryDelay
 ) {}
 ```
 
@@ -236,11 +236,11 @@ Apply your brand-new constraint to your configuration:
 ```java
 @ConfigFile(filename = "Application.properties")
 public record ApplicationConfig(
-    @ConfigProperty(name = "Port")
+    @ConfigProperty(key = "Port")
     @Range(min = 0, max = 65535)
     int port,
 
-    @ConfigProperty(name = "ThreadPoolSize")
+    @ConfigProperty(key = "ThreadPoolSize")
     @Range(min = 1, max = 100)
     int poolSize
 ) {}
@@ -255,7 +255,7 @@ public static void main(String[] args) {
         .withConstraintValidator(new RangeValidator())
         .build();
     
-    // This line will throw because it's constraints have been violated
+    // This line will throw because its constraints have been violated
     // by the Port property in the config file
     var appConfig = factory.createConfig(ApplicationConfig.class);
 }
@@ -276,7 +276,12 @@ JXConfig offers another approach - Configuration Dependencies. Declaratively des
 dependent properties, and JXConfig will resolve the final runtime values for you.
 
 If the value of the dependency matches the required value, the dependent property will be initialized with the
-value from the configuration file; otherwise, its `@ConfigProperty.defaultValue` will be used.
+value from the configuration file.
+If the value values don't match, the property will be initialized using either `ConfigProperty.fallbackKey`,
+or `ConfigProperty.defaultValue` - only one of these members should be defined.
+
+`ConfigProperty.fallbackKey` refers to a key in the `.properties` file, while `ConfigProperty.defaultValue`
+is a hardcoded value in your configuration type.
 
 ### Example
 
@@ -292,9 +297,9 @@ LogLevel = DEBUG
 ```java
 @ConfigFile(filename = "Developer.properties")
 public record DeveloperConfig(
-    @ConfigProperty(name = "DeveloperMode") boolean developerMode,
+    @ConfigProperty(key = "DeveloperMode") boolean developerMode,
 
-    @ConfigProperty(name = "LogLevel", defaultValue = "INFO")
+    @ConfigProperty(key = "LogLevel", defaultValue = "INFO")
     @DependsOn(property = "DeveloperMode", value = "true")
     System.Logger.Level logLevel
 ) {}
@@ -316,6 +321,10 @@ public static void main(String[] args) {
     // ]
 }
 ```
+
+> **DependsOn.key:** If `DeveloperConfig.developerMode` is not used anywhere else in your project, you can safely
+> remove it and use `@DependsOn(key = "DeveloperMode")` instead. In this case, `DeveloperMode`'s value will be read
+> from the configuration file without the need for an intermediate parameter declaration.
 
 > **Note:** By default, the `value` parameter of `@DependsOn` is set to `true`, emulating a boolean-style comparison,
 > so technically the declaration of `@DependsOn.value` in the example above is redundant.
@@ -370,26 +379,26 @@ public class Main {
     }
 
     @ConfigFile(filename = "Example.properties")
-    record ExampleConfiguration(
-        @ConfigProperty(name = "SomeNumber")
+    public record ExampleConfiguration(
+        @ConfigProperty(key = "SomeNumber")
         int integerA,
 
-        @ConfigProperty(name = "LogLevel")
+        @ConfigProperty(key = "LogLevel")
         System.Logger.Level logLevel,
 
-        @ConfigProperty(name = "ConfigurationA", defaultValue = "false")
+        @ConfigProperty(key = "ConfigurationA", defaultValue = "false")
         @DependsOn(property = "SomeNumber", operator = ">", value = "126")
         boolean configurationA,
 
-        @ConfigProperty(name = "ConfigurationB", defaultValue = "false")
+        @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
         @DependsOn(property = "SomeNumber", operator = ">", value = "127")
         boolean configurationB,
 
-        @ConfigProperty(name = "ConfigurationC", defaultValue = "false")
+        @ConfigProperty(key = "ConfigurationC", defaultValue = "false")
         @DependsOn(property = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
         boolean configurationC,
 
-        @ConfigProperty(name = "ConfigurationD", defaultValue = "false")
+        @ConfigProperty(key = "ConfigurationD", defaultValue = "false")
         @DependsOn(property = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
         boolean configurationD
     ) {}
@@ -443,23 +452,23 @@ RateLimit = 0
 ```java
 @ConfigFile(filename = "Developer.properties")
 public record DeveloperConfig(
-    @ConfigProperty(name = "DeveloperMode") boolean developerMode,
+    @ConfigProperty(key = "DeveloperMode") boolean developerMode,
 
     @ConfigGroup
     @DependsOn(property = "DeveloperMode")
     DependentConfig dependentConfig
 ) {
     public record DependentConfig(
-        @ConfigProperty(name = "LogLevel", defaultValue = "INFO")
+        @ConfigProperty(key = "LogLevel", defaultValue = "INFO")
         System.Logger.Level logLevel,
 
-        @ConfigProperty(name = "ShowDebugOverlay", defaultValue = "false")
+        @ConfigProperty(key = "ShowDebugOverlay", defaultValue = "false")
         boolean debugOverlay,
 
-        @ConfigProperty(name = "BypassLogin", defaultValue = "false")
+        @ConfigProperty(key = "BypassLogin", defaultValue = "false")
         boolean bypassLogin,
 
-        @ConfigProperty(name = "RateLimit", defaultValue = "127")
+        @ConfigProperty(key = "RateLimit", defaultValue = "127")
         int rateLimit
   ) {}
 }
@@ -522,12 +531,12 @@ public record NetworkConfig(
     @ConfigGroup(namespace = "GameServer") ServerConfig game
 ) {
     public record ServerConfig(
-        @ConfigProperty(name = "Host") String host,
-        @ConfigProperty(name = "Port") int port,
-        @ConfigProperty(name = "AcceptorThreads") int acceptorThreads,
-        @ConfigProperty(name = "WorkerThreads") int workerThreads,
-        @ConfigProperty(name = "WaterMarkLow") int watermarkLow,
-        @ConfigProperty(name = "WaterMarkHigh") int watermarkHigh
+        @ConfigProperty(key = "Host") String host,
+        @ConfigProperty(key = "Port") int port,
+        @ConfigProperty(key = "AcceptorThreads") int acceptorThreads,
+        @ConfigProperty(key = "WorkerThreads") int workerThreads,
+        @ConfigProperty(key = "WaterMarkLow") int watermarkLow,
+        @ConfigProperty(key = "WaterMarkHigh") int watermarkHigh
     ) {}
 }
 ```

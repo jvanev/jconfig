@@ -52,15 +52,12 @@ class ConfigurationGroupTest {
 
         @ConfigFile(filename = "GroupTestConfiguration.properties")
         public record TopLevelConfiguration(
-            @ConfigProperty(name = "Environment")
-            String environment,
-
-            @ConfigProperty(name = "EnabledDeveloperMode", defaultValue = "false")
-            @DependsOn(property = "Environment", value = "dev")
+            @ConfigProperty(key = "EnabledDeveloperMode", defaultValue = "false")
+            @DependsOn(key = "Environment", value = "dev")
             boolean enabledDevMode,
 
-            @ConfigProperty(name = "DisabledDeveloperMode", defaultValue = "false")
-            @DependsOn(property = "Environment", value = "prod")
+            @ConfigProperty(key = "DisabledDeveloperMode", defaultValue = "false")
+            @DependsOn(key = "Environment", value = "prod")
             boolean disabledDevMode,
 
             @ConfigGroup
@@ -72,16 +69,16 @@ class ConfigurationGroupTest {
             NestedConfiguration disabledConfig
         ) {
             public record NestedConfiguration(
-                @ConfigProperty(name = "LogLevel", defaultValue = "INFO")
+                @ConfigProperty(key = "LogLevel", defaultValue = "INFO")
                 LogLevel logLevel,
 
-                @ConfigProperty(name = "LogTag", defaultValue = "I")
+                @ConfigProperty(key = "LogTag", defaultValue = "I")
                 char logTag,
 
-                @ConfigProperty(name = "EnableCallTraces", defaultValue = "false")
+                @ConfigProperty(key = "EnableCallTraces", defaultValue = "false")
                 boolean enableCallTraces,
 
-                @ConfigProperty(name = "ConnectionTimeout", defaultValue = "8")
+                @ConfigProperty(key = "ConnectionTimeout", defaultValue = "8")
                 int timeout
             ) {
             }
@@ -116,49 +113,47 @@ class ConfigurationGroupTest {
 
         @ConfigFile(filename = "GroupTestConfiguration.properties")
         public record NamespacedConfiguration(
-            @ConfigProperty(name = "EnabledDeveloperMode")
-            boolean enabledDevMode,
-
-            @ConfigProperty(name = "DisabledDeveloperMode")
-            boolean disabledDevMode,
-
             @ConfigGroup(namespace = "DevService")
-            @DependsOn(property = "EnabledDeveloperMode")
+            @DependsOn(key = "EnabledDeveloperMode")
             ServiceConfiguration devService,
 
             @ConfigGroup(namespace = "ClientService")
-            @DependsOn(property = "DisabledDeveloperMode")
+            @DependsOn(key = "DisabledDeveloperMode")
             ServiceConfiguration clientService
         ) {
             public record ServiceConfiguration(
-                @ConfigProperty(name = "EncryptPassword", defaultValue = "true")
+                @ConfigProperty(key = "EncryptPassword", defaultValue = "true")
                 boolean encryptPassword,
 
-                @ConfigProperty(name = "DisableSecurity", defaultValue = "false")
+                @ConfigProperty(key = "DisableSecurity", defaultValue = "false")
                 boolean disableSecurity,
 
-                @ConfigProperty(name = "EncryptionAlgorithm", defaultValue = "ARGON2")
+                @ConfigProperty(key = "EncryptionAlgorithm", defaultValue = "ARGON2")
                 EncryptionAlgorithm encryptionAlgorithm,
 
                 @ConfigGroup(namespace = "Network")
                 NetworkConfiguration networkConfig
             ) {
                 public record NetworkConfiguration(
-                    @ConfigProperty(name = "LogRequest", defaultValue = "false")
+                    @ConfigProperty(key = "LogRequest", defaultValue = "false")
                     boolean logRequest,
 
-                    @ConfigProperty(name = "LogResponse", defaultValue = "true")
+                    @ConfigProperty(key = "LogResponse", defaultValue = "true")
                     boolean logResponse,
 
-                    @ConfigProperty(name = "RequestLimit", defaultValue = "100")
+                    @ConfigProperty(key = "RequestLimit", defaultValue = "100")
                     int requestLimit,
 
-                    @ConfigProperty(name = "ContentType", defaultValue = "application/json")
+                    @ConfigProperty(key = "ContentType", defaultValue = "application/json")
                     String contentType,
 
-                    @ConfigProperty(name = "LogPassword", defaultValue = "false")
+                    @ConfigProperty(key = "LogPassword", defaultValue = "false")
                     @DependsOn(property = "LogResponse")
-                    boolean logPassword
+                    boolean logPassword,
+
+                    @ConfigProperty(key = "LogPasswordFormat", defaultValue = "base64")
+                    @DependsOn(key = "LogRaw")
+                    String passwordLogFormat
                 ) {
                 }
             }
@@ -176,6 +171,7 @@ class ConfigurationGroupTest {
             assertEquals(3, config.devService().networkConfig().requestLimit());
             assertEquals("text/html", config.devService().networkConfig().contentType());
             assertFalse(config.devService().networkConfig().logPassword());
+            assertEquals("plain", config.devService().networkConfig().passwordLogFormat());
         }
 
         @Test
@@ -190,6 +186,7 @@ class ConfigurationGroupTest {
             assertEquals(100, config.clientService().networkConfig().requestLimit());
             assertEquals("application/json", config.clientService().networkConfig().contentType());
             assertFalse(config.clientService().networkConfig().logPassword());
+            assertEquals("base64", config.clientService().networkConfig().passwordLogFormat());
         }
     }
 
@@ -197,15 +194,12 @@ class ConfigurationGroupTest {
     class IncorrectGroupSetupTests {
         @ConfigFile(filename = "GroupTestConfiguration.properties")
         public record MissingDefaultValueOnDependentParameter(
-            @ConfigProperty(name = "DisabledDeveloperMode")
-            boolean enabledDevMode,
-
             @ConfigGroup
-            @DependsOn(property = "DisabledDeveloperMode")
+            @DependsOn(key = "DisabledDeveloperMode")
             Configuration invalidConfiguration
         ) {
             public record Configuration(
-                @ConfigProperty(name = "LogTag")
+                @ConfigProperty(key = "LogTag")
                 char logTag
             ) {
             }
@@ -216,6 +210,27 @@ class ConfigurationGroupTest {
             assertThrows(
                 ConfigurationBuildException.class,
                 () -> factory.createConfig(MissingDefaultValueOnDependentParameter.class)
+            );
+        }
+
+        @ConfigFile(filename = "GroupTestConfiguration.properties")
+        public record MissingConfigurationDependency(
+            @ConfigGroup
+            @DependsOn(key = "NonExistent")
+            Configuration invalidConfiguration
+        ) {
+            public record Configuration(
+                @ConfigProperty(key = "LogTag", defaultValue = "T")
+                char logTag
+            ) {
+            }
+        }
+
+        @Test
+        void missingDependencyInDependentGroup_ShouldThrow() {
+            assertThrows(
+                ConfigurationBuildException.class,
+                () -> factory.createConfig(MissingConfigurationDependency.class)
             );
         }
     }

@@ -21,9 +21,10 @@ import com.jvanev.jxconfig.internal.ReflectionUtil;
 import java.lang.reflect.Parameter;
 
 /**
- * Represents a constructor parameter designated as a configuration parameter
- * (i.e., annotated with {@link ConfigProperty}). Exposes a combined view of the parameter
- * and its annotations.
+ * Represents an entity designated as a configuration parameter. It can be based on a parameter
+ * annotated with {@link ConfigProperty}, in which case it's a representation of a constructor parameter;
+ * or, it can be based on a parameter annotated with {@link DependsOn} using {@link DependsOn#key()},
+ * in which case it's a representation of a key in the configuration file.
  */
 final class ConfigParameter {
     /**
@@ -32,9 +33,14 @@ final class ConfigParameter {
     final String parameterName;
 
     /**
-     * The {@link ConfigProperty#name()} for this parameter.
+     * The {@link ConfigProperty#key()} for this parameter.
      */
-    final String propertyName;
+    final String propertyKey;
+
+    /**
+     * The {@link ConfigProperty#fallbackKey()} for this parameter.
+     */
+    final String propertyFallbackKey;
 
     /**
      * The {@link ConfigProperty#defaultValue()} for this parameter.
@@ -44,7 +50,12 @@ final class ConfigParameter {
     /**
      * The fully qualified name of the {@code .properties} configuration key this parameter is mapped to.
      */
-    final String keyName;
+    final String fileKey;
+
+    /**
+     * Determines whether this parameter is virtual (i.e., it's a representation of a key in the config file).
+     */
+    final boolean isVirtual;
 
     /**
      * Determines whether this parameter is annotated with {@link DependsOn}.
@@ -73,25 +84,57 @@ final class ConfigParameter {
      *
      * @param container The declaring class of the parameter
      * @param parameter The parameter this class represents
+     * @param namespace The namespace within which the parameter is declared
      */
     ConfigParameter(Class<?> container, Parameter parameter, String namespace) {
         parameterName = container.getSimpleName() + "." + parameter.getName();
 
         var property = ReflectionUtil.getConfigProperty(container, parameter);
-        propertyName = property.name();
+        propertyKey = property.key();
+        propertyFallbackKey = property.fallbackKey();
         defaultValue = property.defaultValue();
 
-        keyName = namespace.isBlank() ? propertyName : namespace + "." + propertyName;
+        fileKey = namespace.isBlank() ? propertyKey : namespace + "." + propertyKey;
+        isVirtual = false;
 
         var dependency = ReflectionUtil.getDependsOn(parameter);
         hasDependency = dependency != null;
         checkOperator = hasDependency ? dependency.operator() : "";
-        dependencyName = hasDependency ? dependency.property() : "";
+        dependencyName = hasDependency
+            // Depending on a key rules out the possibility to depend on a property as well
+            ? dependency.key().isBlank() ? dependency.property() : dependency.key()
+            : "";
         dependencyValue = hasDependency ? dependency.value() : "";
+    }
+
+    /**
+     * Creates a new virtual ConfigParameter (i.e., not declared as a parameter in the configuration type).
+     *
+     * @param key       The name of the key in the configuration file
+     * @param namespace The namespace within which the key is declared
+     */
+    ConfigParameter(String key, String namespace) {
+        // Virtual configuration parameters are not constructor parameters
+        parameterName = "";
+
+        propertyKey = key;
+
+        // Virtual configuration parameters cannot have fallbacks
+        propertyFallbackKey = "";
+        defaultValue = "";
+
+        fileKey = namespace.isBlank() ? propertyKey : namespace + "." + propertyKey;
+        isVirtual = true;
+
+        // Virtual configuration parameters cannot have dependencies
+        hasDependency = false;
+        checkOperator = "";
+        dependencyName = "";
+        dependencyValue = "";
     }
 
     @Override
     public String toString() {
-        return propertyName + " (" + parameterName + ")";
+        return propertyKey + " (" + (isVirtual ? "Virtual Parameter" : parameterName) + ")";
     }
 }

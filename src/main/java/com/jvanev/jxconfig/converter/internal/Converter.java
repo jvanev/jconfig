@@ -18,7 +18,6 @@ package com.jvanev.jxconfig.converter.internal;
 import com.jvanev.jxconfig.converter.ValueConverter;
 import com.jvanev.jxconfig.exception.UnsupportedTypeConversionException;
 import com.jvanev.jxconfig.exception.ValueConversionException;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -200,12 +199,6 @@ public final class Converter {
             if (valueOfMethod != null) {
                 result = valueOfMethod.valueOf(null, value);
             }
-        } catch (InvocationTargetException e) {
-            throw new ValueConversionException(
-                "An error occurred while converting '" + value + "' to " + rawType.getSimpleName() +
-                    " using valueOf method.",
-                e.getTargetException()
-            );
         } catch (Exception e) {
             throw new ValueConversionException(
                 "An error occurred while converting '" + value + "' to " + rawType.getSimpleName() +

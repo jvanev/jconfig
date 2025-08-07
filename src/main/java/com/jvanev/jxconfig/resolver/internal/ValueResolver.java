@@ -43,7 +43,7 @@ public final class ValueResolver {
 
     /**
      * Contains the metadata of constructor parameters annotated with {@link ConfigProperty}, keyed by their
-     * {@link ConfigProperty#name()}.
+     * {@link ConfigProperty#key()}.
      */
     private final Map<String, ConfigParameter> parameters = new HashMap<>();
 
@@ -51,6 +51,11 @@ public final class ValueResolver {
      * A cache for already resolved values, mapped to their fully qualified key in the configuration file.
      */
     private final Map<String, String> resolvedValues = new HashMap<>();
+
+    /**
+     * A cache for already resolved default values, mapped to their fully qualified key in the configuration file.
+     */
+    private final Map<String, String> resolvedDefaultValues = new HashMap<>();
 
     /**
      * Creates a new ValueResolver.
@@ -77,7 +82,32 @@ public final class ValueResolver {
                 var property = ReflectionUtil.getConfigProperty(container, parameter);
                 var configParameter = new ConfigParameter(container, parameter, namespace);
 
-                this.parameters.put(property.name(), configParameter);
+                this.parameters.put(property.key(), configParameter);
+            }
+
+            var dependency = ReflectionUtil.getDependsOn(parameter);
+
+            // Create a virtual configuration parameter if the parameter depends on a key in the config file
+            if (dependency != null) {
+                if (!dependency.key().isBlank()) {
+                    if (!dependency.property().isBlank()) {
+                        throw new InvalidDeclarationException(
+                            parameter + " cannot depend on a property and a configuration key at the same time"
+                        );
+                    }
+
+                    this.parameters.computeIfAbsent(
+                        dependency.key(), key -> {
+                            var virtualConfigParameter = new ConfigParameter(key, namespace);
+
+                            // Trigger a check for existence
+                            // This method will throw if the key doesn't exist in the configuration file
+                            getConfigValue(virtualConfigParameter);
+
+                            return virtualConfigParameter;
+                        }
+                    );
+                }
             }
         }
     }
@@ -112,7 +142,20 @@ public final class ValueResolver {
 
         return !configParameter.hasDependency || isDependencyChainSatisfied(configParameter, new LinkedHashSet<>())
             ? getConfigValue(configParameter)
-            : configParameter.defaultValue;
+            : getDefaultValue(configParameter);
+    }
+
+    /**
+     * Returns the default value for the specified parameter.
+     *
+     * @param parameter The parameter whose default value should be retrieved
+     *
+     * @return The parameter's default value.
+     *
+     * @throws InvalidDeclarationException If the parameter is not declared properly.
+     */
+    public String getDefaultValue(Parameter parameter) {
+        return getDefaultValue(getConfigParameter(parameter));
     }
 
     /**
@@ -137,16 +180,17 @@ public final class ValueResolver {
         }
 
         var dependencyInfo = ReflectionUtil.getDependsOn(parameter);
-        var dependency = parameters.get(dependencyInfo.property());
+        var dependencyKey = !dependencyInfo.key().isBlank() ? dependencyInfo.key() : dependencyInfo.property();
+        var dependency = parameters.get(dependencyKey);
         var dependencyValue = !dependency.hasDependency || isDependencyChainSatisfied(dependency, new LinkedHashSet<>())
             ? getConfigValue(dependency)
-            : dependency.defaultValue;
+            : getDefaultValue(dependency);
         var requiredValue = dependencyInfo.value();
         var operator = dependencyInfo.operator();
 
         return operator.isEmpty()
             ? requiredValue.equals(dependencyValue)
-            : checkerNotNull(parameter) && dependencyChecker.check(dependencyValue, operator, requiredValue);
+            : compareWithChecker(parameter, dependencyValue, operator, requiredValue);
     }
 
     /**
@@ -163,7 +207,7 @@ public final class ValueResolver {
      * @throws CircularDependencyException If a circular dependency is detected (e.g., A -> B -> A).
      */
     private boolean isDependencyChainSatisfied(ConfigParameter dependentParameter, Set<String> checkedLinks) {
-        if (!checkedLinks.add(dependentParameter.propertyName)) {
+        if (!checkedLinks.add(dependentParameter.propertyKey)) {
             var links = checkedLinks.stream().map(parameters::get).map(ConfigParameter::toString).toList();
             var chain = String.join(" depends on -> ", links) + " depends on -> " + dependentParameter;
 
@@ -173,53 +217,69 @@ public final class ValueResolver {
         var dependency = getDependency(dependentParameter);
         var dependencyValue = !dependency.hasDependency || isDependencyChainSatisfied(dependency, checkedLinks)
             ? getConfigValue(dependency)
-            : dependency.defaultValue;
+            : getDefaultValue(dependency);
         var requiredValue = dependentParameter.dependencyValue;
         var operator = dependentParameter.checkOperator;
 
         return operator.isEmpty()
             ? dependentParameter.dependencyValue.equals(dependencyValue)
-            : checkerNotNull(dependentParameter) && dependencyChecker.check(dependencyValue, operator, requiredValue);
+            : compareWithChecker(dependentParameter, dependencyValue, operator, requiredValue);
     }
 
     /**
-     * Checks whether a dependency checking mechanism has been set.
+     * Uses the specified operator to compare the specified dependency's value against its required value.
      *
-     * @param parameter The parameter to be used to build a debug message if the check fails
+     * @param dependentParameter The parameter to be used to build a debug message if the check fails
+     * @param dependencyValue    The resolved value of the dependency
+     * @param operator           The operator to be used for the comparison
+     * @param requiredValue      The value to compare the dependency's value against
      *
-     * @return {@code true} or throws.
+     * @return {@code true} if the values are equal, {@code false} otherwise.
      *
      * @throws NullPointerException If {@link #dependencyChecker} is {@code null};
      */
-    private boolean checkerNotNull(Parameter parameter) {
+    private boolean compareWithChecker(
+        Parameter dependentParameter,
+        String dependencyValue,
+        String operator,
+        String requiredValue
+    ) {
         if (dependencyChecker == null) {
-            var fullName = container.getSimpleName() + "." + parameter.getName();
-            var dependsOn = ReflectionUtil.getDependsOn(parameter);
+            var fullName = container.getSimpleName() + "." + dependentParameter.getName();
+            var dependsOn = ReflectionUtil.getDependsOn(dependentParameter);
             var identity = fullName + "(operator " + dependsOn.operator() + ")";
 
             throw new NullPointerException("No custom dependency checker found for " + identity);
         }
 
-        return true;
+        return dependencyChecker.check(dependencyValue, operator, requiredValue);
     }
 
     /**
-     * Checks whether a dependency checking mechanism has been set.
+     * Uses the specified operator to compare the specified dependency's value against its required value.
      *
-     * @param parameter The parameter to be used to build a debug message if the check fails
+     * @param dependentParameter The parameter to be used to build a debug message if the check fails
+     * @param dependencyValue    The resolved value of the dependency
+     * @param operator           The operator to be used for the comparison
+     * @param requiredValue      The value to compare the dependency's value against
      *
-     * @return {@code true} or throws.
+     * @return {@code true} if the values are equal, {@code false} otherwise.
      *
      * @throws NullPointerException If {@link #dependencyChecker} is {@code null};
      */
-    private boolean checkerNotNull(ConfigParameter parameter) {
+    private boolean compareWithChecker(
+        ConfigParameter dependentParameter,
+        String dependencyValue,
+        String operator,
+        String requiredValue
+    ) {
         if (dependencyChecker == null) {
-            var identity = parameter + "(operator " + parameter.checkOperator + ")";
+            var identity = dependentParameter + "(operator " + dependentParameter.checkOperator + ")";
 
             throw new NullPointerException("No custom dependency checker found for " + identity);
         }
 
-        return true;
+        return dependencyChecker.check(dependencyValue, operator, requiredValue);
     }
 
     /**
@@ -233,16 +293,8 @@ public final class ValueResolver {
      */
     private ConfigParameter getConfigParameter(Parameter parameter) {
         var property = ReflectionUtil.getConfigProperty(container, parameter);
-        var configParameter = parameters.get(property.name());
 
-        if (configParameter == null) {
-            throw new InvalidDeclarationException(
-                "Parameter %s.%s is not a configuration parameter"
-                    .formatted(container.getSimpleName(), parameter.getName())
-            );
-        }
-
-        return configParameter;
+        return parameters.get(property.key());
     }
 
     /**
@@ -268,16 +320,67 @@ public final class ValueResolver {
     }
 
     /**
-     * Attempts to retrieve the configuration value corresponding to {@link ConfigParameter#keyName}
+     * Attempts to retrieve the configuration value corresponding to {@link ConfigParameter#fileKey}
      * from the configuration source.
      *
      * @param parameter The parameter whose associated configuration value should be retrieved
      *
-     * @return The value of the key specified by {@link ConfigParameter#keyName},
+     * @return The value of the key specified by {@link ConfigParameter#fileKey},
      * or {@link ConfigParameter#defaultValue} if no such key is defined in the source.
+     *
+     * @throws InvalidDeclarationException If the specified parameter is virtual
+     *                                     and its configuration value cannot be found
      */
     private String getConfigValue(ConfigParameter parameter) {
-        return resolvedValues
-            .computeIfAbsent(parameter.keyName, key -> properties.getProperty(key, parameter.defaultValue));
+        return resolvedValues.computeIfAbsent(
+            parameter.fileKey, key -> {
+                var value = properties.getProperty(key, parameter.isVirtual ? null : getDefaultValue(parameter));
+
+                // Configuration property depends on nonexistent key in the configuration file
+                if (value == null) {
+                    throw new InvalidDeclarationException(
+                        "Property key '%s' of %s cannot be found in the configuration file"
+                            .formatted(parameter.fileKey, parameter)
+                    );
+                }
+
+                return value;
+            }
+        );
+    }
+
+    /**
+     * Returns the default value for the specified parameter.
+     *
+     * @param parameter The parameter whose default value should be retrieved
+     *
+     * @return The default value for the parameter.
+     *
+     * @throws InvalidDeclarationException If the parameter specifies a default property
+     *                                     that's missing in the configuration file.
+     */
+    private String getDefaultValue(ConfigParameter parameter) {
+        return resolvedDefaultValues.computeIfAbsent(
+            parameter.fileKey, key -> {
+                String defaultValue;
+
+                if (parameter.propertyFallbackKey.isBlank()) {
+                    defaultValue = parameter.defaultValue;
+                } else {
+                    var fallbackPropertyValue = properties.getProperty(parameter.propertyFallbackKey);
+
+                    if (fallbackPropertyValue == null) {
+                        throw new InvalidDeclarationException(
+                            "Default property has been set for %s but is not defined in the configuration file"
+                                .formatted(parameter)
+                        );
+                    } else {
+                        defaultValue = fallbackPropertyValue;
+                    }
+                }
+
+                return defaultValue;
+            }
+        );
     }
 }

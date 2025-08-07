@@ -46,10 +46,13 @@ class BaseConfigFactoryTest {
     class ValidConfigurations {
         @ConfigFile(filename = "BaseTestConfiguration.properties")
         public record BaseConfiguration(
-            @ConfigProperty(name = "BooleanProperty")
+            @ConfigProperty(key = "BooleanProperty")
             boolean booleanProperty,
 
-            @ConfigProperty(name = "MissingProperty", defaultValue = "0xFF")
+            @ConfigProperty(key = "MissingBooleanProperty", fallbackKey = "DefaultBooleanProperty")
+            boolean anotherBooleanProperty,
+
+            @ConfigProperty(key = "MissingProperty", defaultValue = "0xFF")
             int integerProperty
         ) {
         }
@@ -59,6 +62,13 @@ class BaseConfigFactoryTest {
             var config = factory.createConfig(BaseConfiguration.class);
 
             assertTrue(config.booleanProperty());
+        }
+
+        @Test
+        void missingPropertyWithDefaultProperty_ShouldReadFromPropertiesFile() {
+            var config = factory.createConfig(BaseConfiguration.class);
+
+            assertTrue(config.anotherBooleanProperty());
         }
 
         @Test
@@ -73,7 +83,7 @@ class BaseConfigFactoryTest {
     class InvalidConfigurations {
         @ConfigFile(filename = "BaseTestConfiguration.properties")
         public record InvalidBaseConfiguration(
-            @ConfigProperty(name = "MissingProperty")
+            @ConfigProperty(key = "MissingProperty")
             int integerProperty
         ) {
         }
@@ -85,10 +95,10 @@ class BaseConfigFactoryTest {
 
         @ConfigFile(filename = "BaseTestConfiguration.properties")
         public record MultipleDeclarationsOfTheSameKeyName(
-            @ConfigProperty(name = "BooleanProperty")
+            @ConfigProperty(key = "BooleanProperty")
             boolean booleanProperty,
 
-            @ConfigProperty(name = "BooleanProperty")
+            @ConfigProperty(key = "BooleanProperty")
             boolean booleanProperty2
         ) {
         }
@@ -116,7 +126,7 @@ class BaseConfigFactoryTest {
         }
 
         public record MissingConfigFileAnnotation(
-            @ConfigProperty(name = "BooleanProperty")
+            @ConfigProperty(key = "BooleanProperty")
             boolean booleanProperty
         ) {
         }
@@ -131,10 +141,10 @@ class BaseConfigFactoryTest {
 
         @ConfigFile(filename = "BaseTestConfiguration.properties")
         public record MultipleConstructorsConfiguration(
-            @ConfigProperty(name = "BooleanProperty")
+            @ConfigProperty(key = "BooleanProperty")
             boolean booleanProperty,
 
-            @ConfigProperty(name = "MissingProperty", defaultValue = "0xFF")
+            @ConfigProperty(key = "MissingProperty", defaultValue = "0xFF")
             int integerProperty
         ) {
             public MultipleConstructorsConfiguration(int integerProperty) {
@@ -152,7 +162,7 @@ class BaseConfigFactoryTest {
 
         @ConfigFile(filename = "BaseTestConfiguration")
         public record MissingFileConfiguration(
-            @ConfigProperty(name = "BooleanProperty")
+            @ConfigProperty(key = "BooleanProperty")
             boolean booleanProperty
         ) {
         }
@@ -162,6 +172,21 @@ class BaseConfigFactoryTest {
             assertThrows(
                 ConfigurationBuildException.class,
                 () -> factory.createConfig(MissingFileConfiguration.class)
+            );
+        }
+
+        @ConfigFile(filename = "BaseTestConfiguration.properties")
+        public record MissingDefaultPropertyConfiguration(
+            @ConfigProperty(key = "BooleanProperty", fallbackKey = "Missing")
+            boolean booleanProperty
+        ) {
+        }
+
+        @Test
+        void onMissingDefaultProperty_ShouldThrow() {
+            assertThrows(
+                ConfigurationBuildException.class,
+                () -> factory.createConfig(MissingDefaultPropertyConfiguration.class)
             );
         }
     }

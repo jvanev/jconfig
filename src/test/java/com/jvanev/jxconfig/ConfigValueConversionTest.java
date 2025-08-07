@@ -58,53 +58,53 @@ class ConfigValueConversionTest {
     class CorrectlyFormattedPropertyTests {
         @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
         public record CorrectPrimitiveConfiguration(
-            @ConfigProperty(name = "BooleanTrueProperty")
+            @ConfigProperty(key = "BooleanTrueProperty")
             boolean booleanTrueProperty,
 
-            @ConfigProperty(name = "BooleanFalseProperty")
+            @ConfigProperty(key = "BooleanFalseProperty")
             boolean booleanFalseProperty,
 
-            @ConfigProperty(name = "ByteProperty")
+            @ConfigProperty(key = "ByteProperty")
             byte byteProperty,
 
-            @ConfigProperty(name = "ShortProperty")
+            @ConfigProperty(key = "ShortProperty")
             short shortProperty,
 
-            @ConfigProperty(name = "IntegerProperty")
+            @ConfigProperty(key = "IntegerProperty")
             int intProperty,
 
-            @ConfigProperty(name = "HexIntegerProperty")
+            @ConfigProperty(key = "HexIntegerProperty")
             int hexIntProperty,
 
-            @ConfigProperty(name = "LongProperty")
+            @ConfigProperty(key = "LongProperty")
             long longProperty,
 
-            @ConfigProperty(name = "FloatProperty")
+            @ConfigProperty(key = "FloatProperty")
             float floatProperty,
 
-            @ConfigProperty(name = "DoubleProperty")
+            @ConfigProperty(key = "DoubleProperty")
             double doubleProperty,
 
-            @ConfigProperty(name = "CharProperty")
+            @ConfigProperty(key = "CharProperty")
             char charProperty
         ) {
         }
 
         @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
         public record CorrectReferenceConfiguration(
-            @ConfigProperty(name = "StringProperty")
+            @ConfigProperty(key = "StringProperty")
             String stringProperty,
 
-            @ConfigProperty(name = "EnumProperty")
+            @ConfigProperty(key = "EnumProperty")
             LogLevel enumProperty,
 
-            @ConfigProperty(name = "StringArrayProperty")
+            @ConfigProperty(key = "StringArrayProperty")
             List<String> stringListProperty,
 
-            @ConfigProperty(name = "IntegerListProperty")
+            @ConfigProperty(key = "IntegerListProperty")
             List<Integer> integerListProperty,
 
-            @ConfigProperty(name = "IntegerSetProperty")
+            @ConfigProperty(key = "IntegerSetProperty")
             Set<Integer> integerSetProperty
         ) {
         }
@@ -141,19 +141,19 @@ class ConfigValueConversionTest {
     class IncorrectlyFormattedPropertyTests {
         @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
         public record IncorrectPropertyConfiguration(
-            @ConfigProperty(name = "MixedCaseTrailingSpaceBooleanTrueProperty")
+            @ConfigProperty(key = "MixedCaseTrailingSpaceBooleanTrueProperty")
             boolean booleanTrueProperty,
 
-            @ConfigProperty(name = "MixedCaseTrailingSpaceBooleanFalseProperty")
+            @ConfigProperty(key = "MixedCaseTrailingSpaceBooleanFalseProperty")
             boolean booleanFalseProperty,
 
-            @ConfigProperty(name = "TrailingSpaceStringProperty")
+            @ConfigProperty(key = "TrailingSpaceStringProperty")
             String stringProperty,
 
-            @ConfigProperty(name = "EmptyIntegerArray")
+            @ConfigProperty(key = "EmptyIntegerArray")
             List<Integer> emptyIntegerArray,
 
-            @ConfigProperty(name = "EmptyStringArray")
+            @ConfigProperty(key = "EmptyStringArray")
             List<String> emptyStringArray
         ) {
         }
@@ -174,7 +174,7 @@ class ConfigValueConversionTest {
     class CustomTypeSupportTests {
         @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
         public record DateTimeFormatterConfigurationParameter(
-            @ConfigProperty(name = "DateTimeFormat")
+            @ConfigProperty(key = "DateTimeFormat")
             DateTimeFormatter formatter
         ) {
         }
@@ -244,7 +244,7 @@ class ConfigValueConversionTest {
 
         @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
         public record InvalidIntegerConfiguration(
-            @ConfigProperty(name = "InvalidIntegerProperty")
+            @ConfigProperty(key = "InvalidIntegerProperty")
             int integerProperty
         ) {
         }
@@ -259,7 +259,7 @@ class ConfigValueConversionTest {
 
         @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
         public record InvalidCharConfiguration(
-            @ConfigProperty(name = "InvalidCharacterProperty")
+            @ConfigProperty(key = "InvalidCharacterProperty")
             char charProperty
         ) {
         }
@@ -274,7 +274,7 @@ class ConfigValueConversionTest {
 
         @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
         public record InvalidEnumCasingConfiguration(
-            @ConfigProperty(name = "EnumUCFirstProperty")
+            @ConfigProperty(key = "EnumUCFirstProperty")
             LogLevel logLevel
         ) {
         }
@@ -289,7 +289,7 @@ class ConfigValueConversionTest {
 
         @ConfigFile(filename = "ValueConversionsTestConfiguration.properties")
         public record InvalidIntegerArrayConfiguration(
-            @ConfigProperty(name = "InvalidIntegerArrayProperty")
+            @ConfigProperty(key = "InvalidIntegerArrayProperty")
             List<Integer> integerArrayProperty
         ) {
         }
