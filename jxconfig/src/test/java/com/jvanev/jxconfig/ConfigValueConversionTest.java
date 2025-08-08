@@ -28,6 +28,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -102,27 +103,31 @@ class ConfigValueConversionTest {
         void shouldSupportPrimitives() {
             var config = factory.createConfig(CorrectPrimitiveConfiguration.class);
 
-            assertTrue(config.booleanTrueProperty());
-            assertFalse(config.booleanFalseProperty());
-            assertEquals(126, config.byteProperty());
-            assertEquals(16584, config.shortProperty());
-            assertEquals(65534, config.intProperty());
-            assertEquals(255, config.hexIntProperty());
-            assertEquals(1234567890, config.longProperty());
-            assertEquals(3.14f, config.floatProperty());
-            assertEquals(3.14, config.doubleProperty());
-            assertEquals('T', config.charProperty());
+            assertAll(
+                () -> assertTrue(config.booleanTrueProperty()),
+                () -> assertFalse(config.booleanFalseProperty()),
+                () -> assertEquals(126, config.byteProperty()),
+                () -> assertEquals(16584, config.shortProperty()),
+                () -> assertEquals(65534, config.intProperty()),
+                () -> assertEquals(255, config.hexIntProperty()),
+                () -> assertEquals(1234567890, config.longProperty()),
+                () -> assertEquals(3.14f, config.floatProperty()),
+                () -> assertEquals(3.14, config.doubleProperty()),
+                () -> assertEquals('T', config.charProperty())
+            );
         }
 
         @Test
         void shouldSupportBoxedPrimitivesAndOtherReferenceTypes() {
             var config = factory.createConfig(CorrectReferenceConfiguration.class);
 
-            assertEquals("This is a test", config.stringProperty);
-            assertEquals(LogLevel.DEBUG, config.enumProperty);
-            assertEquals(List.of("this", "is", "a", "test"), config.stringListProperty);
-            assertEquals(List.of(1, 2, 3, 4, 56), config.integerListProperty);
-            assertEquals(Set.of(1, 2, 3, 4, 56), config.integerSetProperty);
+            assertAll(
+                () -> assertEquals("This is a test", config.stringProperty),
+                () -> assertEquals(LogLevel.DEBUG, config.enumProperty),
+                () -> assertEquals(List.of("this", "is", "a", "test"), config.stringListProperty),
+                () -> assertEquals(List.of(1, 2, 3, 4, 56), config.integerListProperty),
+                () -> assertEquals(Set.of(1, 2, 3, 4, 56), config.integerSetProperty)
+            );
         }
     }
 
@@ -151,11 +156,13 @@ class ConfigValueConversionTest {
         void incorrectlyFormattedPropertyValuesShouldStillWork() {
             var config = factory.createConfig(IncorrectPropertyConfiguration.class);
 
-            assertTrue(config.booleanTrueProperty());
-            assertFalse(config.booleanFalseProperty());
-            assertEquals("This is a test", config.stringProperty());
-            assertEquals(List.of(), config.emptyIntegerArray());
-            assertEquals(List.of(), config.emptyStringArray());
+            assertAll(
+                () -> assertTrue(config.booleanTrueProperty()),
+                () -> assertFalse(config.booleanFalseProperty()),
+                () -> assertEquals("This is a test", config.stringProperty()),
+                () -> assertEquals(List.of(), config.emptyIntegerArray()),
+                () -> assertEquals(List.of(), config.emptyStringArray())
+            );
         }
     }
 

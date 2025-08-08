@@ -23,6 +23,7 @@ import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -77,20 +78,24 @@ class ConfigurationGroupTest {
         void enabledToplevelGroup_ShouldReadFromConfigFile() {
             TopLevelConfiguration config = factory.createConfig(TopLevelConfiguration.class);
 
-            assertEquals(LogLevel.DEBUG, config.enabledConfig().logLevel());
-            assertEquals('D', config.enabledConfig().logTag());
-            assertTrue(config.enabledConfig().enableCallTraces());
-            assertEquals(25, config.enabledConfig().timeout());
+            assertAll(
+                () -> assertEquals(LogLevel.DEBUG, config.enabledConfig().logLevel()),
+                () -> assertEquals('D', config.enabledConfig().logTag()),
+                () -> assertTrue(config.enabledConfig().enableCallTraces()),
+                () -> assertEquals(25, config.enabledConfig().timeout())
+            );
         }
 
         @Test
         void disabledToplevelGroup_ShouldReadDefaultValues() {
             TopLevelConfiguration config = factory.createConfig(TopLevelConfiguration.class);
 
-            assertEquals(LogLevel.INFO, config.disabledConfig().logLevel());
-            assertEquals('I', config.disabledConfig().logTag());
-            assertFalse(config.disabledConfig().enableCallTraces());
-            assertEquals(8, config.disabledConfig().timeout());
+            assertAll(
+                () -> assertEquals(LogLevel.INFO, config.disabledConfig().logLevel()),
+                () -> assertEquals('I', config.disabledConfig().logTag()),
+                () -> assertFalse(config.disabledConfig().enableCallTraces()),
+                () -> assertEquals(8, config.disabledConfig().timeout())
+            );
         }
     }
 
@@ -152,30 +157,34 @@ class ConfigurationGroupTest {
         void enabledNamespacedGroup_ShouldReadFromConfigFile() {
             NamespacedConfiguration config = factory.createConfig(NamespacedConfiguration.class);
 
-            assertFalse(config.devService().encryptPassword());
-            assertTrue(config.devService().disableSecurity());
-            assertEquals(EncryptionAlgorithm.PLAIN_TEXT, config.devService().encryptionAlgorithm());
-            assertTrue(config.devService().networkConfig().logRequest());
-            assertFalse(config.devService().networkConfig().logResponse());
-            assertEquals(3, config.devService().networkConfig().requestLimit());
-            assertEquals("text/html", config.devService().networkConfig().contentType());
-            assertFalse(config.devService().networkConfig().logPassword());
-            assertEquals("plain", config.devService().networkConfig().passwordLogFormat());
+            assertAll(
+                () -> assertFalse(config.devService().encryptPassword()),
+                () -> assertTrue(config.devService().disableSecurity()),
+                () -> assertEquals(EncryptionAlgorithm.PLAIN_TEXT, config.devService().encryptionAlgorithm()),
+                () -> assertTrue(config.devService().networkConfig().logRequest()),
+                () -> assertFalse(config.devService().networkConfig().logResponse()),
+                () -> assertEquals(3, config.devService().networkConfig().requestLimit()),
+                () -> assertEquals("text/html", config.devService().networkConfig().contentType()),
+                () -> assertFalse(config.devService().networkConfig().logPassword()),
+                () -> assertEquals("plain", config.devService().networkConfig().passwordLogFormat())
+            );
         }
 
         @Test
         void disabledNamespacedGroup_ShouldReadDefaultValues() {
             NamespacedConfiguration config = factory.createConfig(NamespacedConfiguration.class);
 
-            assertTrue(config.clientService().encryptPassword());
-            assertFalse(config.clientService().disableSecurity());
-            assertEquals(EncryptionAlgorithm.ARGON2, config.clientService().encryptionAlgorithm());
-            assertFalse(config.clientService().networkConfig().logRequest());
-            assertTrue(config.clientService().networkConfig().logResponse());
-            assertEquals(100, config.clientService().networkConfig().requestLimit());
-            assertEquals("application/json", config.clientService().networkConfig().contentType());
-            assertFalse(config.clientService().networkConfig().logPassword());
-            assertEquals("base64", config.clientService().networkConfig().passwordLogFormat());
+            assertAll(
+                () -> assertTrue(config.clientService().encryptPassword()),
+                () -> assertFalse(config.clientService().disableSecurity()),
+                () -> assertEquals(EncryptionAlgorithm.ARGON2, config.clientService().encryptionAlgorithm()),
+                () -> assertFalse(config.clientService().networkConfig().logRequest()),
+                () -> assertTrue(config.clientService().networkConfig().logResponse()),
+                () -> assertEquals(100, config.clientService().networkConfig().requestLimit()),
+                () -> assertEquals("application/json", config.clientService().networkConfig().contentType()),
+                () -> assertFalse(config.clientService().networkConfig().logPassword()),
+                () -> assertEquals("base64", config.clientService().networkConfig().passwordLogFormat())
+            );
         }
     }
 

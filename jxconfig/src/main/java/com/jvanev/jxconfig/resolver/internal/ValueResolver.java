@@ -364,18 +364,18 @@ public final class ValueResolver {
             parameter.fileKey, key -> {
                 String defaultValue;
 
-                if (parameter.propertyFallbackKey.isBlank()) {
+                if (parameter.propertyDefaultKey.isBlank()) {
                     defaultValue = parameter.defaultValue;
                 } else {
-                    var fallbackPropertyValue = properties.getProperty(parameter.propertyFallbackKey);
+                    var defaultKeyValue = properties.getProperty(parameter.propertyDefaultKey);
 
-                    if (fallbackPropertyValue == null) {
+                    if (defaultKeyValue == null) {
                         throw new InvalidDeclarationException(
                             "Default property has been set for %s but is not defined in the configuration file"
                                 .formatted(parameter)
                         );
                     } else {
-                        defaultValue = fallbackPropertyValue;
+                        defaultValue = defaultKeyValue;
                     }
                 }
 

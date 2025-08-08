@@ -202,10 +202,10 @@ dependent properties, and JXConfig will resolve the final runtime values for you
 
 If the value of the dependency matches the required value, the dependent property will be initialized with the
 value from the configuration file.
-If the value values don't match, the property will be initialized using either `ConfigProperty.fallbackKey`,
+If the values don't match, the property will be initialized using either `ConfigProperty.defaultKey`,
 or `ConfigProperty.defaultValue` - only one of these members should be defined.
 
-`ConfigProperty.fallbackKey` refers to a key in the `.properties` file, while `ConfigProperty.defaultValue`
+`ConfigProperty.defaultKey` refers to a key in the `.properties` file, while `ConfigProperty.defaultValue`
 is a hardcoded value in your configuration type.
 
 ### Example

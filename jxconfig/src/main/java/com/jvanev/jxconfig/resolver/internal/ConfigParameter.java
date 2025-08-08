@@ -38,9 +38,9 @@ final class ConfigParameter {
     final String propertyKey;
 
     /**
-     * The {@link ConfigProperty#fallbackKey()} for this parameter.
+     * The {@link ConfigProperty#defaultKey()} for this parameter.
      */
-    final String propertyFallbackKey;
+    final String propertyDefaultKey;
 
     /**
      * The {@link ConfigProperty#defaultValue()} for this parameter.
@@ -91,7 +91,7 @@ final class ConfigParameter {
 
         var property = ReflectionUtil.getConfigProperty(container, parameter);
         propertyKey = property.key();
-        propertyFallbackKey = property.fallbackKey();
+        propertyDefaultKey = property.defaultKey();
         defaultValue = property.defaultValue();
 
         fileKey = namespace.isBlank() ? propertyKey : namespace + "." + propertyKey;
@@ -120,7 +120,7 @@ final class ConfigParameter {
         propertyKey = key;
 
         // Virtual configuration parameters cannot have fallbacks
-        propertyFallbackKey = "";
+        propertyDefaultKey = "";
         defaultValue = "";
 
         fileKey = namespace.isBlank() ? propertyKey : namespace + "." + propertyKey;

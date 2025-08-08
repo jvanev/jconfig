@@ -40,7 +40,7 @@ class BaseConfigFactoryTest {
             @ConfigProperty(key = "BooleanProperty")
             boolean booleanProperty,
 
-            @ConfigProperty(key = "MissingBooleanProperty", fallbackKey = "DefaultBooleanProperty")
+            @ConfigProperty(key = "MissingBooleanProperty", defaultKey = "DefaultBooleanProperty")
             boolean anotherBooleanProperty,
 
             @ConfigProperty(key = "MissingProperty", defaultValue = "0xFF")
@@ -168,7 +168,7 @@ class BaseConfigFactoryTest {
 
         @ConfigFile(filename = "BaseTestConfiguration.properties")
         public record MissingDefaultPropertyConfiguration(
-            @ConfigProperty(key = "BooleanProperty", fallbackKey = "Missing")
+            @ConfigProperty(key = "BooleanProperty", defaultKey = "Missing")
             boolean booleanProperty
         ) {
         }

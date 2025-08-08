@@ -50,7 +50,7 @@ public @interface ConfigProperty {
      *
      * @return The name of the corresponding key.
      */
-    String fallbackKey() default "";
+    String defaultKey() default "";
 
     /**
      * The default value to be used if the configuration file doesn't contain a key
@@ -59,7 +59,7 @@ public @interface ConfigProperty {
      * Defaults to an empty string. While this is suitable for some types (e.g., arrays and collections),
      * other types (like primitives and enums) require an explicitly specified default value.
      * <p>
-     * <b>Should not be used if a {@link #fallbackKey()} is defined.</b>
+     * <b>Should not be used if a {@link #defaultKey()} is defined.</b>
      *
      * @return The default value for this property.
      */

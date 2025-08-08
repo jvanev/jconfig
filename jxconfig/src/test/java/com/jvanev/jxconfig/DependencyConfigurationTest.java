@@ -41,12 +41,12 @@ class DependencyConfigurationTest {
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record BasicDependencyConfiguration(
             // Tests whether the value will be correctly read from te fallback key when the dependency is not satisfied
-            @ConfigProperty(key = "ProdURL", fallbackKey = "DevURL")
+            @ConfigProperty(key = "ProdURL", defaultKey = "DevURL")
             @DependsOn(key = "Environment", value = "prod")
             String prodUrl,
 
             // Tests whether the value will be correctly read from the primary key when the dependency is satisfied
-            @ConfigProperty(key = "DevURL", fallbackKey = "ProdURL")
+            @ConfigProperty(key = "DevURL", defaultKey = "ProdURL")
             @DependsOn(key = "Environment", value = "dev")
             String devUrl,
 
@@ -188,46 +188,56 @@ class DependencyConfigurationTest {
         void indirectSatisfiedDependencies_ShouldReadFromFile() {
             var config = factory.createConfig(IndirectSatisfiedDependencyConfiguration.class);
 
-            assertTrue(config.configC());
-            assertTrue(config.configB());
-            assertTrue(config.booleanTrueProperty());
+            assertAll(
+                () -> assertTrue(config.configC()),
+                () -> assertTrue(config.configB()),
+                () -> assertTrue(config.booleanTrueProperty())
+            );
         }
 
         @Test
         void indirectUnsatisfiedDependencies_ShouldReadDefaultValue() {
             var config = factory.createConfig(IndirectUnsatisfiedDependencyConfiguration.class);
 
-            assertFalse(config.configA());
-            assertFalse(config.configB());
-            assertFalse(config.configC());
+            assertAll(
+                () -> assertFalse(config.configA()),
+                () -> assertFalse(config.configB()),
+                () -> assertFalse(config.configC())
+            );
         }
 
         @Test
         void indirectMixedSatisfiedDependencies_ShouldReadFromAppropriateSource() {
             var config = factory.createConfig(IndirectMixedSatisfiedDependencyConfiguration.class);
 
-            assertTrue(config.configB());
-            assertTrue(config.configC());
-            assertFalse(config.configD());
-            assertFalse(config.configE());
-            assertFalse(config.configF());
+            assertAll(
+                () -> assertTrue(config.configB()),
+                () -> assertTrue(config.configC()),
+                () -> assertFalse(config.configD()),
+                () -> assertFalse(config.configE()),
+                () -> assertFalse(config.configF())
+            );
         }
 
         @Test
         void dependencySatisfiedByDefaultValue_ShouldReadFromFile() {
             var config = factory.createConfig(DefaultValueSatisfyingDependencyConfiguration.class);
 
-            assertFalse(config.booleanFalseProperty());
-            assertEquals(0, config.integerPropertyTwo());
-            assertTrue(config.configB());
+            assertAll(
+                () -> assertFalse(config.booleanFalseProperty()),
+                () -> assertEquals(0, config.integerPropertyTwo()),
+                () -> assertTrue(config.configB())
+            );
         }
 
         @Test
         void twoKeysDependingOnTheSameSatisfiedDependency_ShouldReadFromFile() {
             var config = factory.createConfig(TwoKeysDependingOnTheSameSatisfiedDependency.class);
 
-            assertEquals(65535, config.integerPropertyOne());
-            assertEquals(65535, config.integerPropertyTwo());
+            assertAll(
+                () -> assertEquals(65535, config.integerPropertyOne()),
+                () -> assertEquals(65535, config.integerPropertyTwo())
+            );
         }
 
         @Test
@@ -406,14 +416,16 @@ class DependencyConfigurationTest {
         void onCustomOperator_ShouldUseCustomChecker() {
             var config = configFactory.createConfig(DependencyConfiguration.class);
 
-            assertTrue(config.configurationB());
-            assertTrue(config.configurationC());
-            assertTrue(config.configurationE());
-            assertFalse(config.configurationF());
-            assertTrue(config.configGroup1().configurationB());
-            assertTrue(config.configGroup1().configurationC());
-            assertFalse(config.configGroup2().configurationB());
-            assertFalse(config.configGroup2().configurationC());
+            assertAll(
+                () -> assertTrue(config.configurationB()),
+                () -> assertTrue(config.configurationC()),
+                () -> assertTrue(config.configurationE()),
+                () -> assertFalse(config.configurationF()),
+                () -> assertTrue(config.configGroup1().configurationB()),
+                () -> assertTrue(config.configGroup1().configurationC()),
+                () -> assertFalse(config.configGroup2().configurationB()),
+                () -> assertFalse(config.configGroup2().configurationC())
+            );
         }
 
         @Test

@@ -23,6 +23,7 @@ import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import com.jvanev.jxconfig.exception.InvalidDeclarationException;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -141,14 +142,16 @@ class ConfigurationContainerFactoryTest {
     void correctlyConfiguredContainer_ShouldBeInitializedCorrectly() {
         var container = factory.createConfigContainer(ConfigurationContainer.class);
 
-        assertTrue(container.baseConfiguration().booleanProperty());
-        assertEquals(0xFF, container.baseConfiguration().integerProperty());
-        assertTrue(container.groupConfiguration().enabledDevMode());
-        assertEquals('D', container.groupConfiguration().enabledConfig().logTag());
-        assertEquals(1234567890L, container.valueConversionsConfiguration().longProperty());
-        assertEquals(3.14f, container.valueConversionsConfiguration().floatProperty());
-        assertEquals(65535, container.dependencyConfiguration().integerPropertyWithSatisfiedDependency());
-        assertEquals(0, container.dependencyConfiguration().integerPropertyWithUnsatisfiedDependency());
+        assertAll(
+            () -> assertTrue(container.baseConfiguration().booleanProperty()),
+            () -> assertEquals(0xFF, container.baseConfiguration().integerProperty()),
+            () -> assertTrue(container.groupConfiguration().enabledDevMode()),
+            () -> assertEquals('D', container.groupConfiguration().enabledConfig().logTag()),
+            () -> assertEquals(1234567890L, container.valueConversionsConfiguration().longProperty()),
+            () -> assertEquals(3.14f, container.valueConversionsConfiguration().floatProperty()),
+            () -> assertEquals(65535, container.dependencyConfiguration().integerPropertyWithSatisfiedDependency()),
+            () -> assertEquals(0, container.dependencyConfiguration().integerPropertyWithUnsatisfiedDependency())
+        );
     }
 
     public record UnannotatedTypeInConfigurationContainer(
