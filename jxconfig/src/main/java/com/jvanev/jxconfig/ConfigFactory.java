@@ -57,6 +57,12 @@ import java.util.function.Predicate;
  * default values, and value resolution.
  */
 public final class ConfigFactory {
+    private static final String DEFAULT_DIR = "./";
+
+    private static final String DEFAULT_CLASS_PATH = "";
+
+    private final String classpath;
+
     private final Path configurationDirectory;
 
     private final Converter converter;
@@ -75,11 +81,15 @@ public final class ConfigFactory {
 
     // Instances of the factory are obtained through the dedicated builder
     private ConfigFactory(
+        String classpath,
         String configurationDirectory,
         Converter converter,
         Validator validator,
         DependencyChecker checker
     ) {
+        this.classpath = classpath.isBlank() ? classpath : classpath.endsWith("/")
+            ? classpath
+            : classpath + "/";
         this.configurationDirectory = Path.of(configurationDirectory);
         this.converter = converter;
         this.validator = validator;
@@ -185,7 +195,10 @@ public final class ConfigFactory {
             return buildConfigurationTree(type, mainContext);
         } catch (IOException e) {
             throw new ConfigurationBuildException(
-                "An error occurred while loading configuration file " + configFile.filename(), e
+                "An error occurred while loading configuration file " + configFile.filename() +
+                    ". Attempted to load the file from classpath '" + classpath + "' and directory '" +
+                    configurationDirectory + "'",
+                e
             );
         } catch (Exception e) {
             throw new ConfigurationBuildException(
@@ -301,7 +314,11 @@ public final class ConfigFactory {
 
     /**
      * Loads and returns a {@link Properties} object populated with the contents of the file with the specified name.
-     * The file is expected to be located within the {@link #configurationDirectory} directory.
+     * The file is expected to be located within the {@link #classpath} and/or
+     * {@link #configurationDirectory}.
+     * <p>
+     * If the file exists in both locations, both files will be loaded and their contents will be merged.
+     * The content of the file from the filesystem will override the matching content of the file from the classpath.
      *
      * @param filename The name of the configuration file, including its extension (e.g., {@code Network.properties}).
      *
@@ -311,9 +328,23 @@ public final class ConfigFactory {
      */
     private Properties getProperties(String filename) throws IOException {
         var properties = new Properties();
+        var defaultConfigFound = false;
+
+        try (var stream = ClassLoader.getSystemClassLoader().getResourceAsStream(classpath + filename)) {
+            if (stream != null) {
+                defaultConfigFound = true;
+
+                properties.load(stream);
+            }
+        }
 
         try (var file = Files.newInputStream(configurationDirectory.resolve(filename))) {
             properties.load(file);
+        } catch (IOException e) {
+            if (!defaultConfigFound) {
+                // No default, no override - we have no other option
+                throw e;
+            }
         }
 
         return properties;
@@ -321,25 +352,94 @@ public final class ConfigFactory {
 
     /**
      * Returns a new builder object responsible for building a new instance of {@link ConfigFactory}.
+     * <p>
+     * The new factory instance will be configured to load files from the default sources:
+     * <ul>
+     *     <li>The root of the application's {@code resources} directory for classpath lookup</li>
+     *     <li>The current working directory (i.e., {@code ./}) for filesystem lookup</li>
+     * </ul>
+     * <p>
+     * To configure the source paths, use {@link #builder(String)} or {@link #builder(String, String)}.
      *
-     * @param configurationDirectory The directory where the {@code .properties} configuration files are located
-     *
-     * @return A new {@link Builder} of {@link ConfigFactory}.
+     * @return A new {@link Builder} for constructing a {@link ConfigFactory}.
      */
-    public static Builder builder(String configurationDirectory) {
-        return new Builder(configurationDirectory);
+    public static Builder builder() {
+        return new Builder(DEFAULT_CLASS_PATH, DEFAULT_DIR);
+    }
+
+    /**
+     * Returns a new builder object responsible for building a new instance of {@link ConfigFactory}.
+     * <p>
+     * The new factory instance will be configured to load files from the specified path,
+     * which must include one of the following prefixes, indicating the source type:
+     * <ul>
+     *     <li>
+     *         {@code classpath} - defines a subdirectory in the classpath where the configuration files are located.
+     *         For example: {@code classpath:config}, {@code classpath:someDir/someSubDir/...}, etc.
+     *     </li>
+     *     <li>
+     *         {@code dir} - defines a directory in the local filesystem.
+     *         For example: {@code dir:/var/config}, {@code dir:./dir/config}, etc.
+     *     </li>
+     * </ul>
+     * <p>
+     * Using this method explicitly sets only one of the sources, while leaving the other at its default.
+     * For example, specifying {@code dir:/var/config} will load files from both {@code /var/config} and
+     * the root of the classpath.
+     * <p>
+     * The default classpath is the root of the application's {@code resources} directory.<br />
+     * The default filesystem directory is the current working directory (i.e., {@code ./}).
+     *
+     * @param path The source path for {@code .properties} configuration files
+     *
+     * @return A new {@link Builder} for constructing a {@link ConfigFactory}.
+     */
+    public static Builder builder(String path) {
+        String classpath = DEFAULT_CLASS_PATH;
+        String dir = DEFAULT_DIR;
+
+        if (path.startsWith(Builder.CLASSPATH_PREFIX)) {
+            classpath = path.substring(Builder.CLASSPATH_PREFIX.length());
+        } else if (path.startsWith(Builder.DIR_PREFIX)) {
+            dir = path.substring(Builder.DIR_PREFIX.length());
+        } else {
+            throw new IllegalArgumentException(
+                "Missing or invalid source type prefix. Use " + Builder.CLASSPATH_PREFIX + " or " + Builder.DIR_PREFIX
+            );
+        }
+
+        return new Builder(classpath, dir);
+    }
+
+    /**
+     * Returns a new builder object responsible for building a new instance of {@link ConfigFactory}.
+     * The new factory instance will be configured to load files from the specified paths.
+     *
+     * @param classpath The base path within the classpath, relative to the application's {@code resources} directory
+     * @param dir       The path to the filesystem directory containing configuration files
+     *
+     * @return A new {@link Builder} for constructing a {@link ConfigFactory}.
+     */
+    public static Builder builder(String classpath, String dir) {
+        return new Builder(classpath, dir);
     }
 
     /**
      * This class is responsible for building immutable instances of {@link ConfigFactory}.
      */
     public static class Builder {
+        private static final String CLASSPATH_PREFIX = "classpath:";
+
+        private static final String DIR_PREFIX = "dir:";
+
         /**
          * A predicate to find the {@link ConstraintValidator} interface of a validator during registration.
          */
         private static final Predicate<Type> VALIDATOR_INTERFACE_PREDICATE = type ->
             type instanceof ParameterizedType parameterizedType &&
                 parameterizedType.getRawType() == ConstraintValidator.class;
+
+        private final String classpath;
 
         private final String configurationDirectory;
 
@@ -352,7 +452,8 @@ public final class ConfigFactory {
         private DependencyChecker dependencyChecker = null;
 
         // Instantiable by the builder method only
-        private Builder(String configurationDirectory) {
+        private Builder(String classpath, String configurationDirectory) {
+            this.classpath = classpath;
             this.configurationDirectory = configurationDirectory;
         }
 
@@ -470,7 +571,7 @@ public final class ConfigFactory {
                 validator = new Validator(bridges, validators);
             }
 
-            return new ConfigFactory(configurationDirectory, converter, validator, dependencyChecker);
+            return new ConfigFactory(classpath, configurationDirectory, converter, validator, dependencyChecker);
         }
     }
 }

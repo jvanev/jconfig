@@ -21,8 +21,6 @@ import com.jvanev.jxconfig.annotation.ConfigProperty;
 import com.jvanev.jxconfig.annotation.DependsOn;
 import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import com.jvanev.jxconfig.resolver.DependencyChecker;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -34,17 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DependencyConfigurationTest {
-    private final String TEST_RESOURCES_DIR = System.getProperty("user.dir") + "/src/test/resources/";
+    private static final String TEST_PATH = "classpath:config";
 
-    private final ConfigFactory factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config").build();
-
-    @BeforeEach
-    void ensureTestConfigurationDirectoryExists() {
-        assertTrue(
-            Files.isDirectory(Paths.get(TEST_RESOURCES_DIR + "config")),
-            "Test configurations directory does not exist"
-        );
-    }
+    private final ConfigFactory factory = ConfigFactory.builder(TEST_PATH).build();
 
     @Nested
     class ValidDependencyDeclarationTests {
@@ -368,7 +358,7 @@ class DependencyConfigurationTest {
 
         @BeforeEach
         void setUp() {
-            configFactory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config")
+            configFactory = ConfigFactory.builder(TEST_PATH)
                 .withDependencyChecker(new CustomChecker())
                 .build();
         }
@@ -428,7 +418,7 @@ class DependencyConfigurationTest {
 
         @Test
         void onCustomOperatorAndMissingCustomChecker_ShouldThrow() {
-            var factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config").build();
+            var factory = ConfigFactory.builder(TEST_PATH).build();
 
             assertThrows(
                 ConfigurationBuildException.class,
@@ -454,7 +444,7 @@ class DependencyConfigurationTest {
 
         @Test
         void onCustomOperatorAndMissingCustomChecker_GroupVersion_ShouldThrow() {
-            var factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config").build();
+            var factory = ConfigFactory.builder(TEST_PATH).build();
 
             assertThrows(
                 ConfigurationBuildException.class,

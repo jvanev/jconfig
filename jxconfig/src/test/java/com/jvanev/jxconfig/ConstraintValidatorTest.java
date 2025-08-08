@@ -23,8 +23,6 @@ import com.jvanev.jxconfig.validator.ValidationBridge;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -32,20 +30,11 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConstraintValidatorTest {
-    private static final String TEST_RESOURCES_DIR = System.getProperty("user.dir") + "/src/test/resources/";
+    private static final String TEST_PATH = "classpath:config";
 
-    private final ConfigFactory.Builder builder = ConfigFactory.builder(TEST_RESOURCES_DIR + "config");
-
-    @BeforeEach
-    void ensureTestConfigurationDirectoryExists() {
-        assertTrue(
-            Files.isDirectory(Paths.get(TEST_RESOURCES_DIR + "config")),
-            "Test configurations directory does not exist"
-        );
-    }
+    private final ConfigFactory.Builder builder = ConfigFactory.builder(TEST_PATH);
 
     @Retention(RetentionPolicy.RUNTIME)
     public @interface Min {
@@ -178,7 +167,7 @@ class ConstraintValidatorTest {
 
         @BeforeEach
         void setUp() {
-            factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config")
+            factory = ConfigFactory.builder(TEST_PATH)
                 .withValidationBridge(new ExternalValidator())
                 .withValidationBridge(new SecondExternalValidator())
                 .build();
@@ -294,7 +283,7 @@ class ConstraintValidatorTest {
         @Test
         void registeringAlreadyRegisteredValidator_ShouldThrow() {
             var validator = new ExternalValidator();
-            var builder = ConfigFactory.builder(TEST_RESOURCES_DIR + "config")
+            var builder = ConfigFactory.builder(TEST_PATH)
                 .withValidationBridge(validator);
 
             assertThrows(

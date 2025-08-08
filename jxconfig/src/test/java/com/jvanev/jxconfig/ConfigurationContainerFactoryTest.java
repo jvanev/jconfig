@@ -21,9 +21,6 @@ import com.jvanev.jxconfig.annotation.ConfigProperty;
 import com.jvanev.jxconfig.annotation.DependsOn;
 import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import com.jvanev.jxconfig.exception.InvalidDeclarationException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -32,17 +29,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConfigurationContainerFactoryTest {
-    private static final String TEST_RESOURCES_DIR = System.getProperty("user.dir") + "/src/test/resources/";
+    private static final String TEST_PATH = "classpath:config";
 
-    private final ConfigFactory factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config").build();
-
-    @BeforeEach
-    void ensureTestConfigurationDirectoryExists() {
-        assertTrue(
-            Files.isDirectory(Paths.get(TEST_RESOURCES_DIR + "config")),
-            "Test configurations directory does not exist"
-        );
-    }
+    private final ConfigFactory factory = ConfigFactory.builder(TEST_PATH).build();
 
     @ConfigFile(filename = "BaseTestConfiguration.properties")
     public record BaseConfiguration(

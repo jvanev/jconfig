@@ -21,13 +21,10 @@ import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -38,17 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConfigValueConversionTest {
-    private final String TEST_RESOURCES_DIR = System.getProperty("user.dir") + "/src/test/resources/";
+    private static final String TEST_PATH = "classpath:config";
 
-    private final ConfigFactory factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config").build();
-
-    @BeforeEach
-    void ensureTestConfigurationDirectoryExists() {
-        assertTrue(
-            Files.isDirectory(Paths.get(TEST_RESOURCES_DIR + "config")),
-            "Test configurations directory does not exist"
-        );
-    }
+    private final ConfigFactory factory = ConfigFactory.builder(TEST_PATH).build();
 
     enum LogLevel {
         DEBUG, INFO
@@ -189,7 +178,7 @@ class ConfigValueConversionTest {
 
         @Test
         void onAddedSupporter_ShouldSupportCustomReferenceType() {
-            var factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config")
+            var factory = ConfigFactory.builder(TEST_PATH)
                 .withConverter(
                     DateTimeFormatter.class,
                     (type, typeArguments, value) -> DateTimeFormatter.ofPattern(value)
@@ -203,7 +192,7 @@ class ConfigValueConversionTest {
 
         @Test
         void onAddedSupporter_ShouldContainUsableCustomReferenceType() {
-            var factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config")
+            var factory = ConfigFactory.builder(TEST_PATH)
                 .withConverter(
                     DateTimeFormatter.class,
                     (type, typeArguments, value) -> DateTimeFormatter.ofPattern(value)
@@ -231,7 +220,7 @@ class ConfigValueConversionTest {
     class InvalidPropertyTests {
         @Test
         void registeringMultipleConvertersForTheSameType_ShouldThrow() {
-            var factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config");
+            var factory = ConfigFactory.builder(TEST_PATH + "config");
 
             assertThrows(
                 IllegalArgumentException.class,

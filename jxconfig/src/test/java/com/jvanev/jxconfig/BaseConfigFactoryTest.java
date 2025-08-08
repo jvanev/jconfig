@@ -19,28 +19,19 @@ import com.jvanev.jxconfig.annotation.ConfigFile;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
 import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import com.jvanev.jxconfig.exception.InvalidDeclarationException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BaseConfigFactoryTest {
-    private static final String TEST_RESOURCES_DIR = System.getProperty("user.dir") + "/src/test/resources/";
+    private static final String TEST_PATH = "classpath:config";
 
-    private final ConfigFactory factory = ConfigFactory.builder(TEST_RESOURCES_DIR + "config").build();
-
-    @BeforeEach
-    void ensureTestConfigurationDirectoryExists() {
-        assertTrue(
-            Files.isDirectory(Paths.get(TEST_RESOURCES_DIR + "config")),
-            "Test configurations directory does not exist"
-        );
-    }
+    private final ConfigFactory factory = ConfigFactory.builder(TEST_PATH).build();
 
     @Nested
     class ValidConfigurations {
@@ -187,6 +178,121 @@ class BaseConfigFactoryTest {
             assertThrows(
                 ConfigurationBuildException.class,
                 () -> factory.createConfig(MissingDefaultPropertyConfiguration.class)
+            );
+        }
+    }
+
+    @Nested
+    class FileLoaderTests {
+        @ConfigFile(filename = "BaseTestConfiguration.properties")
+        public record BaseConfiguration(
+            @ConfigProperty(key = "BooleanProperty")
+            boolean booleanProperty,
+
+            @ConfigProperty(key = "DefaultBooleanProperty")
+            boolean anotherBooleanProperty,
+
+            @ConfigProperty(key = "OverridableBooleanProperty")
+            boolean overridableBooleanProperty
+        ) {
+        }
+
+        @Test
+        void shouldLoadFromDefaultClasspath() {
+            var factory = ConfigFactory.builder().build();
+            var config = factory.createConfig(BaseConfiguration.class);
+
+            assertAll(
+                () -> assertTrue(config.booleanProperty()),
+                () -> assertTrue(config.anotherBooleanProperty()),
+                () -> assertFalse(config.overridableBooleanProperty())
+            );
+        }
+
+        @Test
+        void shouldLoadFromExplicitlySetClasspath() {
+            var factory = ConfigFactory.builder("classpath:config").build();
+            var config = factory.createConfig(BaseConfiguration.class);
+
+            assertAll(
+                () -> assertTrue(config.booleanProperty()),
+                () -> assertTrue(config.anotherBooleanProperty()),
+                () -> assertTrue(config.overridableBooleanProperty())
+            );
+        }
+
+        @Test
+        void shouldLoadFromExplicitlySetDirectoryPath() {
+            var dir = "dir:" + System.getProperty("user.dir") + "/src/test/resources/config";
+            var factory = ConfigFactory.builder(dir).build();
+            var config = factory.createConfig(BaseConfiguration.class);
+
+            assertAll(
+                () -> assertTrue(config.booleanProperty()),
+                () -> assertTrue(config.anotherBooleanProperty()),
+                // Implicitly tests the overriding behavior,
+                // the file is also loaded from the root of the resources dir
+                () -> assertTrue(config.overridableBooleanProperty())
+            );
+        }
+
+        @Test
+        void shouldOverrideThePropertiesInTheClasspathFile() {
+            var classpath = "";
+            var dir = System.getProperty("user.dir") + "/src/test/resources/config";
+            var factory = ConfigFactory.builder(classpath, dir).build();
+            var config = factory.createConfig(BaseConfiguration.class);
+
+            assertAll(
+                () -> assertTrue(config.booleanProperty()),
+                () -> assertTrue(config.anotherBooleanProperty()),
+                () -> assertTrue(config.overridableBooleanProperty())
+            );
+        }
+
+        @Test
+        void shouldHandleClasspathDirSeparatorSuffix() {
+            var factory = ConfigFactory.builder("classpath:config/").build();
+            var config = factory.createConfig(BaseConfiguration.class);
+
+            assertAll(
+                () -> assertTrue(config.booleanProperty()),
+                () -> assertTrue(config.anotherBooleanProperty()),
+                () -> assertTrue(config.overridableBooleanProperty())
+            );
+        }
+
+        @ConfigFile(filename = "AltBaseTestConfiguration.properties")
+        public record AltBaseConfiguration(
+            @ConfigProperty(key = "BooleanProperty")
+            boolean booleanProperty,
+
+            @ConfigProperty(key = "DefaultBooleanProperty")
+            boolean anotherBooleanProperty,
+
+            @ConfigProperty(key = "OverridableBooleanProperty")
+            boolean overridableBooleanProperty
+        ) {
+        }
+
+        @Test
+        void shouldNotThrowWhenClasspathFileDoesNotExist() {
+            var dir = "dir:" + System.getProperty("user.dir") + "/src/test/resources/config";
+            var factory = ConfigFactory.builder(dir).build();
+            var config = factory.createConfig(AltBaseConfiguration.class);
+
+            assertAll(
+                () -> assertTrue(config.booleanProperty()),
+                () -> assertTrue(config.anotherBooleanProperty()),
+                () -> assertTrue(config.overridableBooleanProperty())
+            );
+        }
+
+        @Test
+        void shouldThrowOnMissingOrInvalidPrefix() {
+            assertThrows(
+                IllegalArgumentException.class,
+                () -> ConfigFactory.builder("prefix")
             );
         }
     }
