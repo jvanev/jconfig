@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jvanev.jxconfig.exception;
+package com.jvanev.jxconfig.validator;
 
 /**
- * Thrown when the configuration value constraints have been violated.
+ * Implementations of this interface will be handed fully initialized configuration objects which
+ * they should validate.
  */
-public class ConstraintViolationException extends RuntimeException {
+@FunctionalInterface
+public interface ConfigurationValidator {
     /**
-     * Creates a new ConstraintViolationException.
+     * Validates the specified configuration object. Throws an implementation-specific error on violation.
      *
-     * @param message A message describing the violation
+     * @param configuration The configuration object to be validated
      */
-    public ConstraintViolationException(String message) {
-        super(message);
-    }
+    void validate(Object configuration);
 }
