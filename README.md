@@ -25,6 +25,9 @@ The most basic usage of this factory requires two steps:
 1. Define your configuration type
 2. Let the `ConfigFactory` instantiate it
 
+> **Note:** All examples are based on the assumption that your configuration files are located
+> at the root of your project's `resources` directory.
+
 ### Example
 
 `Database.properties`
@@ -55,7 +58,7 @@ public record DatabaseConfig(
 
 ```java
 public static void main(String[] args) {
-    var factory = ConfigFactory.builder("../configDir").build();
+    var factory = ConfigFactory.builder().build();
     var dbConfig = factory.createConfig(DatabaseConfig.class);
 
     System.out.println(dbConfig);
@@ -129,7 +132,7 @@ public record SystemConfig(
 
 ```java
 public static void main(String[] args) {
-    var factory = ConfigFactory.builder("../configDir")
+    var factory = ConfigFactory.builder()
         .withConverter(
             DateTimeFormatter.class,
             (type, typeArgs, value) -> DateTimeFormatter.ofPattern(value)
@@ -174,7 +177,7 @@ public record SystemConfig(
 
 ```java
 public static void main(String[] args) {
-    var factory = ConfigFactory.builder("../configDir")
+    var factory = ConfigFactory.builder()
         .withConverter(
             long.class,
             (type, typeArgs, value) -> Long.parseLong(value) * 1000
@@ -250,7 +253,7 @@ Let JXConfig know that your validator exists:
 
 ```java
 public static void main(String[] args) {
-    var factory = ConfigFactory.builder("../configDir")
+    var factory = ConfigFactory.builder()
         // Register your brand-new validator
         .withConstraintValidator(new RangeValidator())
         .build();
@@ -309,7 +312,7 @@ public record DeveloperConfig(
 
 ```java
 public static void main(String[] args) {
-    var factory = ConfigFactory.builder("../configDir").build();
+    var factory = ConfigFactory.builder().build();
     var developerConfig = factory.createConfig(DeveloperConfig.class);
 
     System.out.println(developerConfig);
@@ -404,7 +407,7 @@ public class Main {
     ) {}
 
     public static void main(String[] args) {
-        var factory = ConfigFactory.builder("../configDir")
+        var factory = ConfigFactory.builder()
             .withDependencyChecker(new CustomChecker())
             .build();
         var config = factory.createConfig(ExampleConfiguration.class);
@@ -478,7 +481,7 @@ public record DeveloperConfig(
 
 ```java
 public static void main(String[] args) {
-    var factory = ConfigFactory.builder("../configDir").build();
+    var factory = ConfigFactory.builder().build();
     var developerConfig = factory.createConfig(DeveloperConfig.class);
 
     System.out.println(developerConfig);
@@ -545,7 +548,7 @@ public record NetworkConfig(
 
 ```java
 public static void main(String[] args) {
-    var factory = ConfigFactory.builder("../configDir").build();
+    var factory = ConfigFactory.builder().build();
     var networkConfig = factory.createConfig(NetworkConfig.class);
 
     System.out.println(networkConfig);
@@ -605,7 +608,7 @@ public record ConfigContainer(
 
 ```java
 public static void main(String[] args) {
-    var factory = ConfigFactory.builder("../configDir")
+    var factory = ConfigFactory.builder()
         .withConverter(
             DateTimeFormatter.class,
             (type, typeArgs, value) -> DateTimeFormatter.ofPattern(value)
