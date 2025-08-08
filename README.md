@@ -225,7 +225,7 @@ public record DeveloperConfig(
     @ConfigProperty(key = "DeveloperMode") boolean developerMode,
 
     @ConfigProperty(key = "LogLevel", defaultValue = "INFO")
-    @DependsOn(property = "DeveloperMode", value = "true")
+    @DependsOnProperty(name = "DeveloperMode", value = "true")
     System.Logger.Level logLevel
 ) {}
 ```
@@ -247,12 +247,12 @@ public static void main(String[] args) {
 }
 ```
 
-> **DependsOn.key:** If `DeveloperConfig.developerMode` is not used anywhere else in your project, you can safely
-> remove it and use `@DependsOn(key = "DeveloperMode")` instead. In this case, `DeveloperMode`'s value will be read
+> **DependsOnKey:** If `DeveloperConfig.developerMode` is not used anywhere else in your project, you can safely
+> remove it and use `@DependsOnKey(name = "DeveloperMode")` instead. In this case, `DeveloperMode`'s value will be read
 > from the configuration file without the need for an intermediate parameter declaration.
 
-> **Note:** By default, the `value` parameter of `@DependsOn` is set to `true`, emulating a boolean-style comparison,
-> so technically the declaration of `@DependsOn.value` in the example above is redundant.
+> **Note:** By default, the `value` parameter of `@DependsOnProperty` is set to `true`, emulating a boolean-style comparison,
+> so technically the declaration of `@DependsOnProperty.value` in the example above is redundant.
 
 > **Note 2:** The dependent value is compared to the dependency's resolved value, which means if the dependency has a
 > dependency of its own, that relationship will be checked first to determine
@@ -261,10 +261,10 @@ public static void main(String[] args) {
 ### Custom Dependency Condition Check
 
 By default, a **case-sensitive string comparison** is performed to determine whether
-the resolved value of the dependency matches the required value specified in `@DependsOn.value`.
+the resolved value of the dependency matches the required value specified in `@DependsOnProperty.value`.
 
 If this doesn't meet your needs, you can provide a custom comparison strategy via a `DependencyChecker`.
-`DependsOn.operator` should be used to specify operators supported by the custom checker.
+`DependsOnProperty.operator` should be used to specify operators supported by the custom checker.
 
 #### Example
 
@@ -312,19 +312,19 @@ public class Main {
         System.Logger.Level logLevel,
 
         @ConfigProperty(key = "ConfigurationA", defaultValue = "false")
-        @DependsOn(property = "SomeNumber", operator = ">", value = "126")
+        @DependsOnProperty(name = "SomeNumber", operator = ">", value = "126")
         boolean configurationA,
 
         @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
-        @DependsOn(property = "SomeNumber", operator = ">", value = "127")
+        @DependsOnProperty(name = "SomeNumber", operator = ">", value = "127")
         boolean configurationB,
 
         @ConfigProperty(key = "ConfigurationC", defaultValue = "false")
-        @DependsOn(property = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
+        @DependsOnProperty(name = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
         boolean configurationC,
 
         @ConfigProperty(key = "ConfigurationD", defaultValue = "false")
-        @DependsOn(property = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
+        @DependsOnProperty(name = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
         boolean configurationD
     ) {}
 
@@ -350,7 +350,7 @@ public class Main {
 ```
 
 > **Note:** Your custom checker will be invoked for every configuration property that declares
-> a dependency with a non-default `@DependsOn.operator`.
+> a dependency with a non-default `@DependsOnProperty.operator`.
 > Ensure the checker is performant if you expect a high number of dependencies relying on it.
 
 ## Configuration Groups
@@ -380,7 +380,7 @@ public record DeveloperConfig(
     @ConfigProperty(key = "DeveloperMode") boolean developerMode,
 
     @ConfigGroup
-    @DependsOn(property = "DeveloperMode")
+    @DependsOnProperty(name = "DeveloperMode")
     DependentConfig dependentConfig
 ) {
     public record DependentConfig(
@@ -497,7 +497,8 @@ public static void main(String[] args) {
 }
 ```
 
-> **Note:** The namespaces can also define `@DependsOn` and the same rules as for unnamed groups will apply.
+> **Note:** The namespaces can also define `@DependsOnProperty` or `@DependsOnKey`,
+> and the same rules as for unnamed groups will apply.
 
 > **Note 2:** The namespaces can be as deeply nested as needed, the `@ConfigGroup.namespace` corresponds to
 > a single level of nesting (i.e., `@ConfigGroup("Database")` refers to the second level in the namespace

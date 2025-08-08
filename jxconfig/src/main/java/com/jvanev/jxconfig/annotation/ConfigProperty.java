@@ -45,7 +45,7 @@ public @interface ConfigProperty {
      * The same resolution rules apply as for {@link #key()}.
      * <p>
      * Used if the configuration file doesn't contain a key with the specified {@link #key()},
-     * or if the parameter is additionally annotated with {@link DependsOn} and its condition
+     * or if the parameter is additionally annotated with {@link DependsOnProperty} and its condition
      * is not satisfied.
      *
      * @return The name of the corresponding key.
@@ -54,7 +54,8 @@ public @interface ConfigProperty {
 
     /**
      * The default value to be used if the configuration file doesn't contain a key
-     * with the specified {@link #key()}, or if {@link DependsOn} is declared and its condition is not satisfied.
+     * with the specified {@link #key()}, or if {@link DependsOnProperty} is declared
+     * and its condition is not satisfied.
      * <p>
      * Defaults to an empty string. While this is suitable for some types (e.g., arrays and collections),
      * other types (like primitives and enums) require an explicitly specified default value.

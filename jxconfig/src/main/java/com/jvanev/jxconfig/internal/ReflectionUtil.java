@@ -17,7 +17,8 @@ package com.jvanev.jxconfig.internal;
 
 import com.jvanev.jxconfig.annotation.ConfigGroup;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
-import com.jvanev.jxconfig.annotation.DependsOn;
+import com.jvanev.jxconfig.annotation.DependsOnKey;
+import com.jvanev.jxconfig.annotation.DependsOnProperty;
 import com.jvanev.jxconfig.exception.InvalidDeclarationException;
 import java.lang.reflect.Parameter;
 
@@ -75,24 +76,43 @@ public final class ReflectionUtil {
     }
 
     /**
-     * Determines whether the specified parameter is annotated with {@link DependsOn}.
+     * Returns dependency information for the specified parameter.
      *
-     * @param parameter The parameter to be checked
+     * @param parameter The parameter whose dependency information should be retrieved
      *
-     * @return {@code true} if the annotation is present, {@code false} otherwise.
+     * @return The {@link DependencyInfo} if the parameter is annotated with a dependency annotation,
+     * {@code null} otherwise.
      */
-    public static boolean hasDependency(Parameter parameter) {
-        return parameter.isAnnotationPresent(DependsOn.class);
+    public static DependencyInfo getDependencyInfo(Class<?> type, Parameter parameter) {
+        var propertyInfo = parameter.getDeclaredAnnotation(DependsOnProperty.class);
+        var keyInfo = parameter.getDeclaredAnnotation(DependsOnKey.class);
+
+        if (propertyInfo != null && keyInfo != null) {
+            throw new InvalidDeclarationException(
+                "Parameter %s.%s cannot be annotated with @DependsOnKey and @DependsOnProperty at the same time"
+                    .formatted(type.getSimpleName(), parameter.getName())
+            );
+        }
+
+        if (propertyInfo != null) {
+            return new DependencyInfo(propertyInfo.name(), propertyInfo.operator(), propertyInfo.value(), false);
+        }
+
+        if (keyInfo != null) {
+            return new DependencyInfo(keyInfo.name(), keyInfo.operator(), keyInfo.value(), true);
+        }
+
+        return null;
     }
 
     /**
-     * Returns the {@link DependsOn} annotation of the specified parameter.
+     * A unified view that contains the information of either {@link DependsOnProperty} or {@link DependsOnKey}.
      *
-     * @param parameter The annotated parameter
-     *
-     * @return The {@link DependsOn} annotation of the parameter if present, {@code null} otherwise.
+     * @param name             The name of the entity the annotated parameter depends on
+     * @param operator         The operator to be used to compare the value of the dependency to the required value
+     * @param value            The required value to satisfy the dependency condition
+     * @param isDependentOnKey Determines whether the dependency is a key in the configuration file
      */
-    public static DependsOn getDependsOn(Parameter parameter) {
-        return parameter.getDeclaredAnnotation(DependsOn.class);
+    public record DependencyInfo(String name, String operator, String value, boolean isDependentOnKey) {
     }
 }

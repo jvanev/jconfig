@@ -18,7 +18,8 @@ package com.jvanev.jxconfig;
 import com.jvanev.jxconfig.annotation.ConfigFile;
 import com.jvanev.jxconfig.annotation.ConfigGroup;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
-import com.jvanev.jxconfig.annotation.DependsOn;
+import com.jvanev.jxconfig.annotation.DependsOnKey;
+import com.jvanev.jxconfig.annotation.DependsOnProperty;
 import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import com.jvanev.jxconfig.resolver.DependencyChecker;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,12 +43,12 @@ class DependencyConfigurationTest {
         public record BasicDependencyConfiguration(
             // Tests whether the value will be correctly read from te fallback key when the dependency is not satisfied
             @ConfigProperty(key = "ProdURL", defaultKey = "DevURL")
-            @DependsOn(key = "Environment", value = "prod")
+            @DependsOnProperty(name = "Environment", value = "prod")
             String prodUrl,
 
             // Tests whether the value will be correctly read from the primary key when the dependency is satisfied
             @ConfigProperty(key = "DevURL", defaultKey = "ProdURL")
-            @DependsOn(key = "Environment", value = "dev")
+            @DependsOnKey(name = "Environment", value = "dev")
             String devUrl,
 
             @ConfigProperty(key = "BooleanTrueProperty")
@@ -57,11 +58,11 @@ class DependencyConfigurationTest {
             boolean booleanFalseProperty,
 
             @ConfigProperty(key = "IntegerPropertyOne", defaultValue = "0")
-            @DependsOn(property = "BooleanTrueProperty")
+            @DependsOnProperty(name = "BooleanTrueProperty")
             int integerPropertyWithSatisfiedDependency,
 
             @ConfigProperty(key = "IntegerPropertyTwo", defaultValue = "0")
-            @DependsOn(property = "BooleanFalseProperty")
+            @DependsOnProperty(name = "BooleanFalseProperty")
             int integerPropertyWithUnsatisfiedDependency
         ) {
         }
@@ -72,11 +73,11 @@ class DependencyConfigurationTest {
             boolean booleanTrueProperty,
 
             @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
-            @DependsOn(property = "BooleanTrueProperty")
+            @DependsOnProperty(name = "BooleanTrueProperty")
             boolean configB,
 
             @ConfigProperty(key = "ConfigurationC", defaultValue = "false")
-            @DependsOn(property = "ConfigurationB")
+            @DependsOnProperty(name = "ConfigurationB")
             boolean configC
         ) {
         }
@@ -87,11 +88,11 @@ class DependencyConfigurationTest {
             boolean configA,
 
             @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
-            @DependsOn(property = "ConfigurationA")
+            @DependsOnProperty(name = "ConfigurationA")
             boolean configB,
 
             @ConfigProperty(key = "ConfigurationC", defaultValue = "false")
-            @DependsOn(property = "ConfigurationB")
+            @DependsOnProperty(name = "ConfigurationB")
             boolean configC
         ) {
         }
@@ -102,19 +103,19 @@ class DependencyConfigurationTest {
             boolean configB,
 
             @ConfigProperty(key = "ConfigurationC", defaultValue = "false")
-            @DependsOn(property = "ConfigurationB")
+            @DependsOnProperty(name = "ConfigurationB")
             boolean configC,
 
             @ConfigProperty(key = "ConfigurationD", defaultValue = "false")
-            @DependsOn(property = "ConfigurationC")
+            @DependsOnProperty(name = "ConfigurationC")
             boolean configD,
 
             @ConfigProperty(key = "ConfigurationE", defaultValue = "false")
-            @DependsOn(property = "ConfigurationD")
+            @DependsOnProperty(name = "ConfigurationD")
             boolean configE,
 
             @ConfigProperty(key = "ConfigurationF", defaultValue = "false")
-            @DependsOn(property = "ConfigurationE")
+            @DependsOnProperty(name = "ConfigurationE")
             boolean configF
         ) {
         }
@@ -125,11 +126,11 @@ class DependencyConfigurationTest {
             boolean booleanFalseProperty,
 
             @ConfigProperty(key = "IntegerPropertyTwo", defaultValue = "0")
-            @DependsOn(property = "BooleanFalseProperty")
+            @DependsOnProperty(name = "BooleanFalseProperty")
             int integerPropertyTwo,
 
             @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
-            @DependsOn(property = "IntegerPropertyTwo", value = "0")
+            @DependsOnProperty(name = "IntegerPropertyTwo", value = "0")
             boolean configB
         ) {
         }
@@ -140,11 +141,11 @@ class DependencyConfigurationTest {
             boolean booleanTrue,
 
             @ConfigProperty(key = "IntegerPropertyOne", defaultValue = "0")
-            @DependsOn(property = "BooleanTrueProperty")
+            @DependsOnProperty(name = "BooleanTrueProperty")
             int integerPropertyOne,
 
             @ConfigProperty(key = "IntegerPropertyTwo", defaultValue = "0")
-            @DependsOn(property = "BooleanTrueProperty")
+            @DependsOnProperty(name = "BooleanTrueProperty")
             int integerPropertyTwo
         ) {
         }
@@ -155,11 +156,11 @@ class DependencyConfigurationTest {
             boolean booleanTrue,
 
             @ConfigProperty(key = "IntegerPropertyOne", defaultValue = "0")
-            @DependsOn(property = "BooleanFalseProperty")
+            @DependsOnProperty(name = "BooleanFalseProperty")
             int integerPropertyOne,
 
             @ConfigProperty(key = "IntegerPropertyTwo", defaultValue = "0")
-            @DependsOn(property = "BooleanFalseProperty")
+            @DependsOnProperty(name = "BooleanFalseProperty")
             int integerPropertyTwo
         ) {
         }
@@ -257,7 +258,7 @@ class DependencyConfigurationTest {
             boolean booleanProperty,
 
             @ConfigProperty(key = "IntegerPropertyOne")
-            @DependsOn(property = "BooleanProperty")
+            @DependsOnProperty(name = "BooleanProperty")
             int integerProperty
         ) {
         }
@@ -265,7 +266,7 @@ class DependencyConfigurationTest {
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record DependingOnNonExistentConfigurationProperty(
             @ConfigProperty(key = "BooleanProperty", defaultValue = "false")
-            @DependsOn(property = "NonExistent")
+            @DependsOnProperty(name = "NonExistent")
             boolean booleanProperty
         ) {
         }
@@ -273,7 +274,7 @@ class DependencyConfigurationTest {
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record DependingOnNonExistentConfigurationKey(
             @ConfigProperty(key = "BooleanProperty", defaultValue = "false")
-            @DependsOn(key = "NonExistent")
+            @DependsOnKey(name = "NonExistent")
             boolean booleanProperty
         ) {
         }
@@ -284,7 +285,8 @@ class DependencyConfigurationTest {
             int integerProperty,
 
             @ConfigProperty(key = "BooleanProperty", defaultValue = "false")
-            @DependsOn(key = "IntegerPropertyTwo", property = "IntegerPropertyOne")
+            @DependsOnKey(name = "IntegerPropertyTwo")
+            @DependsOnProperty(name = "IntegerPropertyOne")
             boolean booleanProperty
         ) {
         }
@@ -292,11 +294,11 @@ class DependencyConfigurationTest {
         @ConfigFile(filename = "DependencyTestConfiguration.properties")
         public record CircularDependencyGraph(
             @ConfigProperty(key = "BooleanTrueProperty", defaultValue = "false")
-            @DependsOn(property = "IntegerPropertyOne", value = "65535")
+            @DependsOnProperty(name = "IntegerPropertyOne", value = "65535")
             boolean booleanProperty,
 
             @ConfigProperty(key = "IntegerPropertyOne", defaultValue = "0")
-            @DependsOn(property = "BooleanTrueProperty")
+            @DependsOnProperty(name = "BooleanTrueProperty")
             int integerProperty
         ) {
         }
@@ -379,27 +381,27 @@ class DependencyConfigurationTest {
             int integerPropertyOne,
 
             @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
-            @DependsOn(property = "IntegerPropertyOne", operator = ">", value = "65534")
+            @DependsOnProperty(name = "IntegerPropertyOne", operator = ">", value = "65534")
             boolean configurationB,
 
             @ConfigProperty(key = "ConfigurationC", defaultValue = "false")
-            @DependsOn(key = "IntegerPropertyTwo", operator = "<", value = "65536")
+            @DependsOnKey(name = "IntegerPropertyTwo", operator = "<", value = "65536")
             boolean configurationC,
 
             @ConfigProperty(key = "ConfigurationE", defaultValue = "false")
-            @DependsOn(key = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
+            @DependsOnKey(name = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
             boolean configurationE,
 
             @ConfigProperty(key = "ConfigurationF", defaultValue = "false")
-            @DependsOn(key = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
+            @DependsOnKey(name = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
             boolean configurationF,
 
             @ConfigGroup
-            @DependsOn(key = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
+            @DependsOnKey(name = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
             ConfigurationGroup configGroup1,
 
             @ConfigGroup
-            @DependsOn(key = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
+            @DependsOnKey(name = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
             ConfigurationGroup configGroup2
         ) {
             public record ConfigurationGroup(
@@ -444,7 +446,7 @@ class DependencyConfigurationTest {
             System.Logger.Level logLevel,
 
             @ConfigGroup
-            @DependsOn(property = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
+            @DependsOnProperty(name = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
             ConfigurationGroup configGroup1
         ) {
             public record ConfigurationGroup(

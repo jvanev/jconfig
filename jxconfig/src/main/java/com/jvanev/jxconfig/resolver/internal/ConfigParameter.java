@@ -16,15 +16,16 @@
 package com.jvanev.jxconfig.resolver.internal;
 
 import com.jvanev.jxconfig.annotation.ConfigProperty;
-import com.jvanev.jxconfig.annotation.DependsOn;
+import com.jvanev.jxconfig.annotation.DependsOnKey;
+import com.jvanev.jxconfig.annotation.DependsOnProperty;
 import com.jvanev.jxconfig.internal.ReflectionUtil;
 import java.lang.reflect.Parameter;
 
 /**
  * Represents an entity designated as a configuration parameter. It can be based on a parameter
  * annotated with {@link ConfigProperty}, in which case it's a representation of a constructor parameter;
- * or, it can be based on a parameter annotated with {@link DependsOn} using {@link DependsOn#key()},
- * in which case it's a representation of a key in the configuration file.
+ * or, it can be based on a parameter annotated with {@link DependsOnKey}, in which case it's
+ * a representation of a key in the configuration file.
  */
 final class ConfigParameter {
     /**
@@ -58,7 +59,7 @@ final class ConfigParameter {
     final boolean isVirtual;
 
     /**
-     * Determines whether this parameter is annotated with {@link DependsOn}.
+     * Determines whether this parameter is annotated with {@link DependsOnProperty} or {@link DependsOnKey}.
      */
     final boolean hasDependency;
 
@@ -68,14 +69,16 @@ final class ConfigParameter {
     final String checkOperator;
 
     /**
-     * The {@link DependsOn#property()} for this parameter. Might be an empty string if the parameter
-     * is not annotated with {@link DependsOn}, use {@link #hasDependency} to determine if it is.
+     * The {@link DependsOnProperty#name()} or {@link DependsOnKey#name()} for this parameter.
+     * Might be an empty string if the parameter doesn't declare a dependency,
+     * use {@link #hasDependency} to determine if it does.
      */
     final String dependencyName;
 
     /**
-     * The {@link DependsOn#value()} for this parameter. Might be an empty string if the parameter
-     * is not annotated with {@link DependsOn}, use {@link #hasDependency} to determine if it is.
+     * The {@link DependsOnProperty#value()} or {@link DependsOnKey#value()} for this parameter.
+     * Might be an empty string if the parameter doesn't declare a dependency,
+     * use {@link #hasDependency} to determine if it does.
      */
     final String dependencyValue;
 
@@ -97,13 +100,10 @@ final class ConfigParameter {
         fileKey = namespace.isBlank() ? propertyKey : namespace + "." + propertyKey;
         isVirtual = false;
 
-        var dependency = ReflectionUtil.getDependsOn(parameter);
+        var dependency = ReflectionUtil.getDependencyInfo(container, parameter);
         hasDependency = dependency != null;
         checkOperator = hasDependency ? dependency.operator() : "";
-        dependencyName = hasDependency
-            // Depending on a key rules out the possibility to depend on a property as well
-            ? dependency.key().isBlank() ? dependency.property() : dependency.key()
-            : "";
+        dependencyName = hasDependency ? dependency.name() : "";
         dependencyValue = hasDependency ? dependency.value() : "";
     }
 

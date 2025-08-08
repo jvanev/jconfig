@@ -26,24 +26,13 @@ import java.lang.annotation.Target;
  */
 @Target({ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface DependsOn {
+public @interface DependsOnProperty {
     /**
      * The {@link ConfigProperty#key()} of the property that will determine the runtime value of this parameter.
      *
      * @return The {@link ConfigProperty#key()} of the dependency.
      */
-    String property() default "";
-
-    /**
-     * The name of the key in the configuration file, whose value will determine the runtime value of this parameter.
-     * <p>
-     * Used to define a dependency that doesn't need to be declared in the configuration type.
-     * <p>
-     * <b>Should not be set if a {@link DependsOn#property()} is defined.</b>
-     *
-     * @return The name of the key.
-     */
-    String key() default "";
+    String name() default "";
 
     /**
      * The operator to be used for condition check.

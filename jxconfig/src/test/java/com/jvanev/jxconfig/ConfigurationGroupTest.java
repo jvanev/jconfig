@@ -18,7 +18,8 @@ package com.jvanev.jxconfig;
 import com.jvanev.jxconfig.annotation.ConfigFile;
 import com.jvanev.jxconfig.annotation.ConfigGroup;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
-import com.jvanev.jxconfig.annotation.DependsOn;
+import com.jvanev.jxconfig.annotation.DependsOnKey;
+import com.jvanev.jxconfig.annotation.DependsOnProperty;
 import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -43,19 +44,19 @@ class ConfigurationGroupTest {
         @ConfigFile(filename = "GroupTestConfiguration.properties")
         public record TopLevelConfiguration(
             @ConfigProperty(key = "EnabledDeveloperMode", defaultValue = "false")
-            @DependsOn(key = "Environment", value = "dev")
+            @DependsOnKey(name = "Environment", value = "dev")
             boolean enabledDevMode,
 
             @ConfigProperty(key = "DisabledDeveloperMode", defaultValue = "false")
-            @DependsOn(key = "Environment", value = "prod")
+            @DependsOnKey(name = "Environment", value = "prod")
             boolean disabledDevMode,
 
             @ConfigGroup
-            @DependsOn(property = "EnabledDeveloperMode")
+            @DependsOnProperty(name = "EnabledDeveloperMode")
             NestedConfiguration enabledConfig,
 
             @ConfigGroup
-            @DependsOn(property = "DisabledDeveloperMode")
+            @DependsOnProperty(name = "DisabledDeveloperMode")
             NestedConfiguration disabledConfig
         ) {
             public record NestedConfiguration(
@@ -108,11 +109,11 @@ class ConfigurationGroupTest {
         @ConfigFile(filename = "GroupTestConfiguration.properties")
         public record NamespacedConfiguration(
             @ConfigGroup(namespace = "DevService")
-            @DependsOn(key = "EnabledDeveloperMode")
+            @DependsOnKey(name = "EnabledDeveloperMode")
             ServiceConfiguration devService,
 
             @ConfigGroup(namespace = "ClientService")
-            @DependsOn(key = "DisabledDeveloperMode")
+            @DependsOnKey(name = "DisabledDeveloperMode")
             ServiceConfiguration clientService
         ) {
             public record ServiceConfiguration(
@@ -142,11 +143,11 @@ class ConfigurationGroupTest {
                     String contentType,
 
                     @ConfigProperty(key = "LogPassword", defaultValue = "false")
-                    @DependsOn(property = "LogResponse")
+                    @DependsOnProperty(name = "LogResponse")
                     boolean logPassword,
 
                     @ConfigProperty(key = "LogPasswordFormat", defaultValue = "base64")
-                    @DependsOn(key = "LogRaw")
+                    @DependsOnKey(name = "LogRaw")
                     String passwordLogFormat
                 ) {
                 }
@@ -193,7 +194,7 @@ class ConfigurationGroupTest {
         @ConfigFile(filename = "GroupTestConfiguration.properties")
         public record MissingDefaultValueOnDependentParameter(
             @ConfigGroup
-            @DependsOn(key = "DisabledDeveloperMode")
+            @DependsOnKey(name = "DisabledDeveloperMode")
             Configuration invalidConfiguration
         ) {
             public record Configuration(
@@ -214,7 +215,7 @@ class ConfigurationGroupTest {
         @ConfigFile(filename = "GroupTestConfiguration.properties")
         public record MissingConfigurationDependency(
             @ConfigGroup
-            @DependsOn(key = "NonExistent")
+            @DependsOnKey(name = "NonExistent")
             Configuration invalidConfiguration
         ) {
             public record Configuration(

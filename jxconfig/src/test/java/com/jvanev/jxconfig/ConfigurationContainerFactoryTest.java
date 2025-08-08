@@ -18,7 +18,7 @@ package com.jvanev.jxconfig;
 import com.jvanev.jxconfig.annotation.ConfigFile;
 import com.jvanev.jxconfig.annotation.ConfigGroup;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
-import com.jvanev.jxconfig.annotation.DependsOn;
+import com.jvanev.jxconfig.annotation.DependsOnProperty;
 import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import com.jvanev.jxconfig.exception.InvalidDeclarationException;
 import org.junit.jupiter.api.Test;
@@ -53,11 +53,11 @@ class ConfigurationContainerFactoryTest {
         boolean disabledDevMode,
 
         @ConfigGroup
-        @DependsOn(property = "EnabledDeveloperMode")
+        @DependsOnProperty(name = "EnabledDeveloperMode")
         NestedConfiguration enabledConfig,
 
         @ConfigGroup
-        @DependsOn(property = "DisabledDeveloperMode")
+        @DependsOnProperty(name = "DisabledDeveloperMode")
         NestedConfiguration disabledConfig
     ) {
         public record NestedConfiguration(
@@ -116,11 +116,11 @@ class ConfigurationContainerFactoryTest {
         boolean booleanFalseProperty,
 
         @ConfigProperty(key = "IntegerPropertyOne", defaultValue = "0")
-        @DependsOn(property = "BooleanTrueProperty")
+        @DependsOnProperty(name = "BooleanTrueProperty")
         int integerPropertyWithSatisfiedDependency,
 
         @ConfigProperty(key = "IntegerPropertyTwo", defaultValue = "0")
-        @DependsOn(property = "BooleanFalseProperty")
+        @DependsOnProperty(name = "BooleanFalseProperty")
         int integerPropertyWithUnsatisfiedDependency
     ) {
     }

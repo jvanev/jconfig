@@ -17,7 +17,7 @@ package com.jvanev.jxconfig.resolver.internal;
 
 import com.jvanev.jxconfig.annotation.ConfigGroup;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
-import com.jvanev.jxconfig.annotation.DependsOn;
+import com.jvanev.jxconfig.annotation.DependsOnProperty;
 import com.jvanev.jxconfig.exception.CircularDependencyException;
 import com.jvanev.jxconfig.exception.InvalidDeclarationException;
 import com.jvanev.jxconfig.internal.ReflectionUtil;
@@ -85,19 +85,13 @@ public final class ValueResolver {
                 this.parameters.put(property.key(), configParameter);
             }
 
-            var dependency = ReflectionUtil.getDependsOn(parameter);
+            var dependency = ReflectionUtil.getDependencyInfo(container, parameter);
 
             // Create a virtual configuration parameter if the parameter depends on a key in the config file
             if (dependency != null) {
-                if (!dependency.key().isBlank()) {
-                    if (!dependency.property().isBlank()) {
-                        throw new InvalidDeclarationException(
-                            parameter + " cannot depend on a property and a configuration key at the same time"
-                        );
-                    }
-
+                if (dependency.isDependentOnKey()) {
                     this.parameters.computeIfAbsent(
-                        dependency.key(), key -> {
+                        dependency.name(), key -> {
                             var virtualConfigParameter = new ConfigParameter(key, namespace);
 
                             // Trigger a check for existence
@@ -115,16 +109,16 @@ public final class ValueResolver {
     /**
      * Resolves and returns the final configuration value for the specified parameter.
      * <p>
-     * The resolution process respects {@link DependsOn} annotations:
+     * The resolution process respects {@link DependsOnProperty} annotations:
      * <ul>
      *     <li>
      *         If the property has no dependency, its value is directly read from the configuration {@code .properties}
      *         file (or its {@link ConfigProperty#defaultValue()} if the key is not found).
      *     </li>
      *     <li>
-     *         If the property defines a dependency using {@link DependsOn}, the value from the configuration
+     *         If the property defines a dependency using {@link DependsOnProperty}, the value from the configuration
      *         file will be loaded if, and only if, the dependency condition is satisfied (i.e., its resolved
-     *         value matches the {@link DependsOn#value()}).
+     *         value matches the {@link DependsOnProperty#value()}).
      *         Otherwise, {@link ConfigProperty#defaultValue()} will be returned.
      *     </li>
      * </ul>
@@ -175,13 +169,13 @@ public final class ValueResolver {
      * @throws CircularDependencyException If a circular dependency is detected (e.g., A -> B -> A).
      */
     public boolean isGroupDependencySatisfied(Parameter parameter) {
-        if (!ReflectionUtil.hasDependency(parameter)) {
+        var dependencyInfo = ReflectionUtil.getDependencyInfo(container, parameter);
+
+        if (dependencyInfo == null) {
             return true;
         }
 
-        var dependencyInfo = ReflectionUtil.getDependsOn(parameter);
-        var dependencyKey = !dependencyInfo.key().isBlank() ? dependencyInfo.key() : dependencyInfo.property();
-        var dependency = parameters.get(dependencyKey);
+        var dependency = parameters.get(dependencyInfo.name());
         var dependencyValue = !dependency.hasDependency || isDependencyChainSatisfied(dependency, new LinkedHashSet<>())
             ? getConfigValue(dependency)
             : getDefaultValue(dependency);
@@ -190,7 +184,7 @@ public final class ValueResolver {
 
         return operator.isEmpty()
             ? requiredValue.equals(dependencyValue)
-            : compareWithChecker(parameter, dependencyValue, operator, requiredValue);
+            : compareWithChecker(parameter, dependencyInfo, dependencyValue, operator, requiredValue);
     }
 
     /**
@@ -240,14 +234,14 @@ public final class ValueResolver {
      */
     private boolean compareWithChecker(
         Parameter dependentParameter,
+        ReflectionUtil.DependencyInfo dependencyInfo,
         String dependencyValue,
         String operator,
         String requiredValue
     ) {
         if (dependencyChecker == null) {
             var fullName = container.getSimpleName() + "." + dependentParameter.getName();
-            var dependsOn = ReflectionUtil.getDependsOn(dependentParameter);
-            var identity = fullName + "(operator " + dependsOn.operator() + ")";
+            var identity = fullName + "(operator " + dependencyInfo.operator() + ")";
 
             throw new NullPointerException("No custom dependency checker found for " + identity);
         }
