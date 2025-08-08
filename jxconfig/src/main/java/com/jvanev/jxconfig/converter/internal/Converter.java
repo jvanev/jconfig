@@ -220,7 +220,7 @@ public final class Converter {
         if (result == null) {
             throw new UnsupportedTypeConversionException(
                 "Cannot convert " + value + " to type " + rawType + ". " +
-                    "Consider registering a custom converter via ConfigFactory.addValueConverter"
+                    "Consider registering a custom converter via ConfigFactory.Builder.withConverter"
             );
         }
 

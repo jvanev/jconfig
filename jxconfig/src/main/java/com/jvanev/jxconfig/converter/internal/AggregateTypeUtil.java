@@ -141,7 +141,7 @@ final class AggregateTypeUtil {
             throw new UnsupportedTypeConversionException(
                 "Cannot convert value '" + value + "' to type " + type.getSimpleName() +
                     "<" + valueType.getTypeName() + ">. " +
-                    "Consider registering a custom converter via ConfigFactory.addValueConverter"
+                    "Consider registering a custom converter via ConfigFactory.Builder.withConverter"
             );
         }
 

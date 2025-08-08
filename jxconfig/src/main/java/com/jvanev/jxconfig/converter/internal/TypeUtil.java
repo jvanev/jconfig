@@ -47,7 +47,7 @@ final class TypeUtil {
 
         throw new UnsupportedTypeConversionException(
             "Conversions to type " + type.getClass().getSimpleName() + " are not supported. " +
-                "Consider registering a custom converter via ConfigFactory.addValueConverter"
+                "Consider registering a custom converter via ConfigFactory.Builder.withConverter"
         );
     }
 
