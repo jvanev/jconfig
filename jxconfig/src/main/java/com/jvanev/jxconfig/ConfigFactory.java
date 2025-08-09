@@ -26,6 +26,7 @@ import com.jvanev.jxconfig.internal.ReflectionUtil;
 import com.jvanev.jxconfig.resolver.DependencyChecker;
 import com.jvanev.jxconfig.resolver.internal.ValueResolver;
 import com.jvanev.jxconfig.validator.ConfigurationValidator;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Parameter;
 import java.nio.file.Files;
@@ -179,13 +180,6 @@ public final class ConfigFactory {
             var mainContext = new BuildContext(properties, "", true);
 
             return buildConfigurationTree(type, mainContext);
-        } catch (IOException e) {
-            throw new ConfigurationBuildException(
-                "An error occurred while loading configuration file " + configFile.filename() +
-                    ". Attempted to load the file from classpath '" + classpath + "' and directory '" +
-                    configurationDirectory + "'",
-                e
-            );
         } catch (Exception e) {
             throw new ConfigurationBuildException(
                 "Failed to create an instance of configuration type " + type.getSimpleName(), e
@@ -311,7 +305,9 @@ public final class ConfigFactory {
         var properties = new Properties();
         var defaultConfigFound = false;
 
-        try (var stream = ClassLoader.getSystemClassLoader().getResourceAsStream(classpath + filename)) {
+        var classpathConfig = classpath + filename;
+
+        try (var stream = Thread.currentThread().getContextClassLoader().getResourceAsStream(classpathConfig)) {
             if (stream != null) {
                 defaultConfigFound = true;
 
@@ -319,13 +315,17 @@ public final class ConfigFactory {
             }
         }
 
-        try (var file = Files.newInputStream(configurationDirectory.resolve(filename))) {
-            properties.load(file);
-        } catch (IOException e) {
-            if (!defaultConfigFound) {
-                // No default, no override - we have no other option
-                throw e;
+        var filesystemConfig = configurationDirectory.resolve(filename);
+
+        if (Files.isRegularFile(filesystemConfig)) {
+            try (var stream = Files.newInputStream(filesystemConfig)) {
+                properties.load(stream);
             }
+        } else if (!defaultConfigFound) {
+            throw new FileNotFoundException(
+                "Could not find configuration file " + filename + ". Attempted classpath lookup for " +
+                    classpathConfig + ", and filesystem lookup for " + configurationDirectory
+            );
         }
 
         return properties;

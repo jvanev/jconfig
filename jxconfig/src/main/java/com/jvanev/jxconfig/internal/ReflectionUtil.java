@@ -108,11 +108,11 @@ public final class ReflectionUtil {
     /**
      * A unified view that contains the information of either {@link DependsOnProperty} or {@link DependsOnKey}.
      *
-     * @param name             The name of the entity the annotated parameter depends on
-     * @param operator         The operator to be used to compare the value of the dependency to the required value
-     * @param value            The required value to satisfy the dependency condition
-     * @param isDependentOnKey Determines whether the dependency is a key in the configuration file
+     * @param name            The name of the entity the annotated parameter depends on
+     * @param operator        The operator to be used to compare the value of the dependency to the required value
+     * @param value           The required value to satisfy the dependency condition
+     * @param isKeyDependency Determines whether the dependency is a key in the configuration file
      */
-    public record DependencyInfo(String name, String operator, String value, boolean isDependentOnKey) {
+    public record DependencyInfo(String name, String operator, String value, boolean isKeyDependency) {
     }
 }

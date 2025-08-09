@@ -89,7 +89,7 @@ public final class ValueResolver {
 
             // Create a virtual configuration parameter if the parameter depends on a key in the config file
             if (dependency != null) {
-                if (dependency.isDependentOnKey()) {
+                if (dependency.isKeyDependency()) {
                     this.parameters.computeIfAbsent(
                         dependency.name(), key -> {
                             var virtualConfigParameter = new ConfigParameter(key, namespace);
