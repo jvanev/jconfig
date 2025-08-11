@@ -15,6 +15,7 @@
  */
 package com.jvanev.jxconfig.converter;
 
+import com.jvanev.jxconfig.converter.internal.Converter;
 import java.lang.reflect.Type;
 
 /**
@@ -25,11 +26,12 @@ public interface ValueConverter {
     /**
      * Converts a {@link String} value to the specified target type.
      *
+     * @param converter     The converter instance
      * @param targetType    The type to which the value must be converted
      * @param typeArguments The actual type arguments of the target type (if any)
      * @param value         The value to be converted
      *
      * @return The converted value.
      */
-    Object convert(Type targetType, Type[] typeArguments, String value);
+    Object convert(Converter converter, Type targetType, Type[] typeArguments, String value);
 }

@@ -16,7 +16,7 @@
 package com.jvanev.jxconfig;
 
 import com.jvanev.jxconfig.annotation.ConfigFile;
-import com.jvanev.jxconfig.annotation.ConfigGroup;
+import com.jvanev.jxconfig.annotation.ConfigNamespace;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
 import com.jvanev.jxconfig.annotation.DependsOnKey;
 import com.jvanev.jxconfig.annotation.DependsOnProperty;
@@ -30,10 +30,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class ConfigurationGroupTest {
-    private static final String TEST_PATH = "classpath:config";
+class ConfigurationNamespaceTest {
+    private static final String TEST_PATH = "config";
 
-    private final ConfigFactory factory = ConfigFactory.builder(TEST_PATH).build();
+    private final ConfigFactory factory = ConfigFactory.builder()
+        .withClasspathDir(TEST_PATH)
+        .build();
 
     @Nested
     class TopLevelGroupTests {
@@ -41,7 +43,7 @@ class ConfigurationGroupTest {
             DEBUG, INFO
         }
 
-        @ConfigFile(filename = "GroupTestConfiguration.properties")
+        @ConfigFile(filename = "NamespaceTestConfiguration.properties")
         public record TopLevelConfiguration(
             @ConfigProperty(key = "EnabledDeveloperMode", defaultValue = "false")
             @DependsOnKey(name = "Environment", value = "dev")
@@ -51,11 +53,11 @@ class ConfigurationGroupTest {
             @DependsOnKey(name = "Environment", value = "prod")
             boolean disabledDevMode,
 
-            @ConfigGroup
+            @ConfigNamespace
             @DependsOnProperty(name = "EnabledDeveloperMode")
             NestedConfiguration enabledConfig,
 
-            @ConfigGroup
+            @ConfigNamespace
             @DependsOnProperty(name = "DisabledDeveloperMode")
             NestedConfiguration disabledConfig
         ) {
@@ -106,13 +108,13 @@ class ConfigurationGroupTest {
             PLAIN_TEXT, ARGON2
         }
 
-        @ConfigFile(filename = "GroupTestConfiguration.properties")
+        @ConfigFile(filename = "NamespaceTestConfiguration.properties")
         public record NamespacedConfiguration(
-            @ConfigGroup(namespace = "DevService")
+            @ConfigNamespace("DevService")
             @DependsOnKey(name = "EnabledDeveloperMode")
             ServiceConfiguration devService,
 
-            @ConfigGroup(namespace = "ClientService")
+            @ConfigNamespace("ClientService")
             @DependsOnKey(name = "DisabledDeveloperMode")
             ServiceConfiguration clientService
         ) {
@@ -126,7 +128,7 @@ class ConfigurationGroupTest {
                 @ConfigProperty(key = "EncryptionAlgorithm", defaultValue = "ARGON2")
                 EncryptionAlgorithm encryptionAlgorithm,
 
-                @ConfigGroup(namespace = "Network")
+                @ConfigNamespace("Network")
                 NetworkConfiguration networkConfig
             ) {
                 public record NetworkConfiguration(
@@ -193,7 +195,7 @@ class ConfigurationGroupTest {
     class IncorrectGroupSetupTests {
         @ConfigFile(filename = "GroupTestConfiguration.properties")
         public record MissingDefaultValueOnDependentParameter(
-            @ConfigGroup
+            @ConfigNamespace
             @DependsOnKey(name = "DisabledDeveloperMode")
             Configuration invalidConfiguration
         ) {
@@ -214,7 +216,7 @@ class ConfigurationGroupTest {
 
         @ConfigFile(filename = "GroupTestConfiguration.properties")
         public record MissingConfigurationDependency(
-            @ConfigGroup
+            @ConfigNamespace
             @DependsOnKey(name = "NonExistent")
             Configuration invalidConfiguration
         ) {

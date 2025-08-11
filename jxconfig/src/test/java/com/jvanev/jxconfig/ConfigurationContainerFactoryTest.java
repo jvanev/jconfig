@@ -16,7 +16,7 @@
 package com.jvanev.jxconfig;
 
 import com.jvanev.jxconfig.annotation.ConfigFile;
-import com.jvanev.jxconfig.annotation.ConfigGroup;
+import com.jvanev.jxconfig.annotation.ConfigNamespace;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
 import com.jvanev.jxconfig.annotation.DependsOnProperty;
 import com.jvanev.jxconfig.exception.ConfigurationBuildException;
@@ -30,9 +30,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConfigurationContainerFactoryTest {
-    private static final String TEST_PATH = "classpath:config";
+    private static final String TEST_PATH = "config";
 
-    private final ConfigFactory factory = ConfigFactory.builder(TEST_PATH).build();
+    private final ConfigFactory factory = ConfigFactory.builder()
+        .withClasspathDir(TEST_PATH)
+        .build();
 
     @ConfigFile(filename = "BaseTestConfiguration.properties")
     public record BaseConfiguration(
@@ -44,19 +46,19 @@ class ConfigurationContainerFactoryTest {
     ) {
     }
 
-    @ConfigFile(filename = "GroupTestConfiguration.properties")
-    public record GroupConfiguration(
+    @ConfigFile(filename = "NamespaceTestConfiguration.properties")
+    public record NamespaceConfiguration(
         @ConfigProperty(key = "EnabledDeveloperMode")
         boolean enabledDevMode,
 
         @ConfigProperty(key = "DisabledDeveloperMode")
         boolean disabledDevMode,
 
-        @ConfigGroup
+        @ConfigNamespace
         @DependsOnProperty(name = "EnabledDeveloperMode")
         NestedConfiguration enabledConfig,
 
-        @ConfigGroup
+        @ConfigNamespace
         @DependsOnProperty(name = "DisabledDeveloperMode")
         NestedConfiguration disabledConfig
     ) {
@@ -127,7 +129,7 @@ class ConfigurationContainerFactoryTest {
 
     public record ConfigurationContainer(
         BaseConfiguration baseConfiguration,
-        GroupConfiguration groupConfiguration,
+        NamespaceConfiguration namespaceConfiguration,
         ValueConversionsConfiguration valueConversionsConfiguration,
         DependencyConfiguration dependencyConfiguration
     ) {
@@ -145,8 +147,8 @@ class ConfigurationContainerFactoryTest {
         assertAll(
             () -> assertTrue(container.baseConfiguration().booleanProperty()),
             () -> assertEquals(0xFF, container.baseConfiguration().integerProperty()),
-            () -> assertTrue(container.groupConfiguration().enabledDevMode()),
-            () -> assertEquals('D', container.groupConfiguration().enabledConfig().logTag()),
+            () -> assertTrue(container.namespaceConfiguration().enabledDevMode()),
+            () -> assertEquals('D', container.namespaceConfiguration().enabledConfig().logTag()),
             () -> assertEquals(1234567890L, container.valueConversionsConfiguration().longProperty()),
             () -> assertEquals(3.14f, container.valueConversionsConfiguration().floatProperty()),
             () -> assertEquals(65535, container.dependencyConfiguration().integerPropertyWithSatisfiedDependency()),
@@ -157,7 +159,7 @@ class ConfigurationContainerFactoryTest {
     public record UnannotatedTypeInConfigurationContainer(
         ConfigurationContainer unannotatedConfiguration,
         BaseConfiguration baseConfiguration,
-        GroupConfiguration groupConfiguration,
+        NamespaceConfiguration namespaceConfiguration,
         ValueConversionsConfiguration valueConversionsConfiguration,
         DependencyConfiguration dependencyConfiguration
     ) {

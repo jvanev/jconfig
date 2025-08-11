@@ -29,9 +29,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BaseConfigFactoryTest {
-    private static final String TEST_PATH = "classpath:config";
+    private static final String TEST_PATH = "config";
 
-    private final ConfigFactory factory = ConfigFactory.builder(TEST_PATH).build();
+    private final ConfigFactory factory = ConfigFactory.builder()
+        .withClasspathDir(TEST_PATH)
+        .build();
 
     @Nested
     class ValidConfigurations {
@@ -67,6 +69,41 @@ class BaseConfigFactoryTest {
             var config = factory.createConfig(BaseConfiguration.class);
 
             assertEquals(0xFF, config.integerProperty);
+        }
+
+        @ConfigFile(filename = "BaseTestConfiguration.properties")
+        public static class BaseClassConfiguration {
+            public final boolean booleanProperty;
+
+            public final boolean anotherBooleanProperty;
+
+            public final int integerProperty;
+
+            public BaseClassConfiguration(
+                @ConfigProperty(key = "BooleanProperty")
+                boolean booleanProperty,
+
+                @ConfigProperty(key = "MissingBooleanProperty", defaultKey = "DefaultBooleanProperty")
+                boolean anotherBooleanProperty,
+
+                @ConfigProperty(key = "MissingProperty", defaultValue = "0xFF")
+                int integerProperty
+            ) {
+                this.booleanProperty = booleanProperty;
+                this.anotherBooleanProperty = anotherBooleanProperty;
+                this.integerProperty = integerProperty;
+            }
+        }
+
+        @Test
+        void shouldSupportClasses() {
+            var config = factory.createConfig(BaseClassConfiguration.class);
+
+            assertAll(
+                () -> assertTrue(config.booleanProperty),
+                () -> assertTrue(config.anotherBooleanProperty),
+                () -> assertEquals(0xFF, config.integerProperty)
+            );
         }
     }
 
@@ -211,7 +248,9 @@ class BaseConfigFactoryTest {
 
         @Test
         void shouldLoadFromExplicitlySetClasspath() {
-            var factory = ConfigFactory.builder("classpath:config").build();
+            var factory = ConfigFactory.builder()
+                .withClasspathDir(TEST_PATH)
+                .build();
             var config = factory.createConfig(BaseConfiguration.class);
 
             assertAll(
@@ -223,8 +262,10 @@ class BaseConfigFactoryTest {
 
         @Test
         void shouldLoadFromExplicitlySetDirectoryPath() {
-            var dir = "dir:" + System.getProperty("user.dir") + "/src/test/resources/config";
-            var factory = ConfigFactory.builder(dir).build();
+            var dir = System.getProperty("user.dir") + "/src/test/resources/config";
+            var factory = ConfigFactory.builder()
+                .withFilesystemDir(dir)
+                .build();
             var config = factory.createConfig(BaseConfiguration.class);
 
             assertAll(
@@ -240,7 +281,10 @@ class BaseConfigFactoryTest {
         void shouldOverrideThePropertiesInTheClasspathFile() {
             var classpath = "";
             var dir = System.getProperty("user.dir") + "/src/test/resources/config";
-            var factory = ConfigFactory.builder(classpath, dir).build();
+            var factory = ConfigFactory.builder()
+                .withClasspathDir(classpath)
+                .withFilesystemDir(dir)
+                .build();
             var config = factory.createConfig(BaseConfiguration.class);
 
             assertAll(
@@ -252,7 +296,9 @@ class BaseConfigFactoryTest {
 
         @Test
         void shouldHandleClasspathDirSeparatorSuffix() {
-            var factory = ConfigFactory.builder("classpath:config/").build();
+            var factory = ConfigFactory.builder()
+                .withClasspathDir("config/")
+                .build();
             var config = factory.createConfig(BaseConfiguration.class);
 
             assertAll(
@@ -277,22 +323,16 @@ class BaseConfigFactoryTest {
 
         @Test
         void shouldNotThrowWhenClasspathFileDoesNotExist() {
-            var dir = "dir:" + System.getProperty("user.dir") + "/src/test/resources/config";
-            var factory = ConfigFactory.builder(dir).build();
+            var dir = System.getProperty("user.dir") + "/src/test/resources/config";
+            var factory = ConfigFactory.builder()
+                .withFilesystemDir(dir)
+                .build();
             var config = factory.createConfig(AltBaseConfiguration.class);
 
             assertAll(
                 () -> assertTrue(config.booleanProperty()),
                 () -> assertTrue(config.anotherBooleanProperty()),
                 () -> assertTrue(config.overridableBooleanProperty())
-            );
-        }
-
-        @Test
-        void shouldThrowOnMissingOrInvalidPrefix() {
-            assertThrows(
-                IllegalArgumentException.class,
-                () -> ConfigFactory.builder("prefix")
             );
         }
     }

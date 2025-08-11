@@ -15,7 +15,7 @@
  */
 package com.jvanev.jxconfig.resolver.internal;
 
-import com.jvanev.jxconfig.annotation.ConfigGroup;
+import com.jvanev.jxconfig.annotation.ConfigNamespace;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
 import com.jvanev.jxconfig.annotation.DependsOnProperty;
 import com.jvanev.jxconfig.exception.CircularDependencyException;
@@ -78,7 +78,7 @@ public final class ValueResolver {
         this.dependencyChecker = checker;
 
         for (Parameter parameter : parameters) {
-            if (!ReflectionUtil.isConfigGroup(parameter)) {
+            if (!ReflectionUtil.isConfigNamespace(parameter)) {
                 var property = ReflectionUtil.getConfigProperty(container, parameter);
                 var configParameter = new ConfigParameter(container, parameter, namespace);
 
@@ -157,18 +157,18 @@ public final class ValueResolver {
      * <p>
      * The condition is satisfied if, and only if:
      * <ul>
-     *     <li>The group doesn't have a dependency</li>
+     *     <li>The namespace doesn't have a dependency</li>
      *     <li>The resolved value of the declared dependency satisfies the dependency condition</li>
      * </ul>
      *
-     * @param parameter The parameter whose condition should be checked; must be annotated with {@link ConfigGroup}
+     * @param parameter The parameter whose condition should be checked; must be annotated with {@link ConfigNamespace}
      *
-     * @return {@code true} if the group's dependency condition is satisfied, {@code false} otherwise.
+     * @return {@code true} if the namespace's dependency condition is satisfied, {@code false} otherwise.
      *
-     * @throws InvalidDeclarationException If the group depends on an unknown parameter.
+     * @throws InvalidDeclarationException If the namespace depends on an unknown parameter.
      * @throws CircularDependencyException If a circular dependency is detected (e.g., A -> B -> A).
      */
-    public boolean isGroupDependencySatisfied(Parameter parameter) {
+    public boolean isNamespaceDependencySatisfied(Parameter parameter) {
         var dependencyInfo = ReflectionUtil.getDependencyInfo(container, parameter);
 
         if (dependencyInfo == null) {

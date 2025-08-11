@@ -15,7 +15,7 @@
  */
 package com.jvanev.jxconfig.internal;
 
-import com.jvanev.jxconfig.annotation.ConfigGroup;
+import com.jvanev.jxconfig.annotation.ConfigNamespace;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
 import com.jvanev.jxconfig.annotation.DependsOnKey;
 import com.jvanev.jxconfig.annotation.DependsOnProperty;
@@ -54,25 +54,25 @@ public final class ReflectionUtil {
     }
 
     /**
-     * Determines whether the specified parameter is annotated with {@link ConfigGroup}.
+     * Determines whether the specified parameter is annotated with {@link ConfigNamespace}.
      *
      * @param parameter The parameter to be checked
      *
      * @return {@code true} if the annotation is present, {@code false} otherwise.
      */
-    public static boolean isConfigGroup(Parameter parameter) {
-        return parameter.isAnnotationPresent(ConfigGroup.class);
+    public static boolean isConfigNamespace(Parameter parameter) {
+        return parameter.isAnnotationPresent(ConfigNamespace.class);
     }
 
     /**
-     * Returns the {@link ConfigGroup} annotation of the specified parameter.
+     * Returns the {@link ConfigNamespace} annotation of the specified parameter.
      *
      * @param parameter The annotated parameter
      *
-     * @return The {@link ConfigGroup} annotation of the parameter if present, {@code null} otherwise.
+     * @return The {@link ConfigNamespace} annotation of the parameter if present, {@code null} otherwise.
      */
-    public static ConfigGroup getConfigGroup(Parameter parameter) {
-        return parameter.getDeclaredAnnotation(ConfigGroup.class);
+    public static ConfigNamespace getConfigNamespace(Parameter parameter) {
+        return parameter.getDeclaredAnnotation(ConfigNamespace.class);
     }
 
     /**

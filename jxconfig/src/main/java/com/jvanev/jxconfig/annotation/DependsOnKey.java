@@ -23,10 +23,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a {@link ConfigProperty} or a {@link ConfigGroup} as dependent on the value of
+ * Marks a {@link ConfigProperty} or a {@link ConfigNamespace} as dependent on the value of
  * a specified key in the configuration file.
  */
-@Target({ElementType.PARAMETER})
+@Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface DependsOnKey {
     /**

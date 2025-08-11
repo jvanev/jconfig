@@ -21,7 +21,6 @@ import com.jvanev.jxconfig.exception.ValueConversionException;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +66,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * and a {@link LinkedHashSet} for {@link Set}.
  *
  * <h3>Custom Converters and Overriding Behavior:</h3>
- * Additional type conversion support can be seamlessly integrated using the {@link #addValueConverter} method.
+ * Additional type conversion support can be seamlessly integrated through {@link #Converter(Map)}.
  * Custom converters registered via this method take precedence over the default conversion logic
  * for direct matches. If the newly registered converter's supported type doesn't match the target
  * type directly, a more specific conversion mechanism will be looked up first; if no direct match exists
@@ -78,7 +77,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * conversion provided by this class will be skipped, and your custom converter will be invoked instead.
  */
 public final class Converter {
-    private final Map<Class<?>, ValueConverter> converters = new LinkedHashMap<>();
+    private final Map<Class<?>, ValueConverter> converters;
 
     /**
      * A cache of references to static valueOf methods mapped to their declaring type.
@@ -108,16 +107,12 @@ public final class Converter {
     }
 
     /**
-     * Registers a custom converter for a specific target type.
-     * <p>
-     * When a conversion is requested for the specified type, the specified converter will be invoked
-     * to perform the string-to-object conversion. Custom converters override default behavior.
+     * Creates a new Converter.
      *
-     * @param type      The {@link Class} representing the target type this converter can produce
-     * @param converter The {@code String} to {@code type} conversion mechanism
+     * @param converters The custom value converters
      */
-    public void addValueConverter(Class<?> type, ValueConverter converter) {
-        converters.put(type, converter);
+    public Converter(Map<Class<?>, ValueConverter> converters) {
+        this.converters = converters;
     }
 
     /**
@@ -127,7 +122,7 @@ public final class Converter {
      * <ul>
      *     <li>
      *         <b>Custom Converters:</b> Checks if a custom converter has been registered for the specified type
-     *         or any of its supertypes/interfaces using {@link #addValueConverter}.
+     *         or any of its supertypes/interfaces.
      *     </li>
      *     <li>
      *         <b>Built-in Conversions:</b> If no custom converter is found, it proceeds with its
@@ -148,7 +143,7 @@ public final class Converter {
         var rawType = TypeUtil.getClass(type);
 
         if (converters.containsKey(rawType)) {
-            return converters.get(rawType).convert(type, TypeUtil.getTypeArguments(type), value);
+            return converters.get(rawType).convert(this, type, TypeUtil.getTypeArguments(type), value);
         }
 
         if (ReferenceTypeUtil.isString(rawType)) {
@@ -210,7 +205,7 @@ public final class Converter {
         if (result == null) {
             for (var set : converters.entrySet()) {
                 if (set.getKey().isAssignableFrom(rawType)) {
-                    result = set.getValue().convert(type, TypeUtil.getTypeArguments(type), value);
+                    result = set.getValue().convert(this, type, TypeUtil.getTypeArguments(type), value);
 
                     break;
                 }

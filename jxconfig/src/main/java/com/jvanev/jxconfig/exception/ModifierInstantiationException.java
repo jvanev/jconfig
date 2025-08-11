@@ -13,23 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jvanev.jxconfig.annotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package com.jvanev.jxconfig.exception;
 
 /**
- * Maps a class to a configuration file.
+ * Thrown when a value modifier instantiation fails.
  */
-@Target(ElementType.TYPE)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface ConfigFile {
+public class ModifierInstantiationException extends RuntimeException {
     /**
-     * The name of the configuration file, including its extension (e.g., {@code Config.properties}).
+     * Creates a new ModifierInstantiationException.
      *
-     * @return The configuration file's name.
+     * @param message A message containing debug information to act on
+     * @param cause   The exception that caused this exception
      */
-    String filename();
+    public ModifierInstantiationException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

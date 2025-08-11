@@ -16,7 +16,7 @@
 package com.jvanev.jxconfig;
 
 import com.jvanev.jxconfig.annotation.ConfigFile;
-import com.jvanev.jxconfig.annotation.ConfigGroup;
+import com.jvanev.jxconfig.annotation.ConfigNamespace;
 import com.jvanev.jxconfig.annotation.ConfigProperty;
 import com.jvanev.jxconfig.annotation.DependsOnKey;
 import com.jvanev.jxconfig.annotation.DependsOnProperty;
@@ -33,9 +33,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DependencyConfigurationTest {
-    private static final String TEST_PATH = "classpath:config";
+    private static final String TEST_PATH = "config";
 
-    private final ConfigFactory factory = ConfigFactory.builder(TEST_PATH).build();
+    private final ConfigFactory factory = ConfigFactory.builder()
+        .withClasspathDir(TEST_PATH)
+        .build();
 
     @Nested
     class ValidDependencyDeclarationTests {
@@ -370,7 +372,8 @@ class DependencyConfigurationTest {
 
         @BeforeEach
         void setUp() {
-            configFactory = ConfigFactory.builder(TEST_PATH)
+            configFactory = ConfigFactory.builder()
+                .withClasspathDir(TEST_PATH)
                 .withDependencyChecker(new CustomChecker())
                 .build();
         }
@@ -396,15 +399,15 @@ class DependencyConfigurationTest {
             @DependsOnKey(name = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
             boolean configurationF,
 
-            @ConfigGroup
+            @ConfigNamespace
             @DependsOnKey(name = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
-            ConfigurationGroup configGroup1,
+            ConfigurationNamespace configNamespace1,
 
-            @ConfigGroup
+            @ConfigNamespace
             @DependsOnKey(name = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
-            ConfigurationGroup configGroup2
+            ConfigurationNamespace configNamespace2
         ) {
-            public record ConfigurationGroup(
+            public record ConfigurationNamespace(
                 @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
                 boolean configurationB,
 
@@ -423,16 +426,18 @@ class DependencyConfigurationTest {
                 () -> assertTrue(config.configurationC()),
                 () -> assertTrue(config.configurationE()),
                 () -> assertFalse(config.configurationF()),
-                () -> assertTrue(config.configGroup1().configurationB()),
-                () -> assertTrue(config.configGroup1().configurationC()),
-                () -> assertFalse(config.configGroup2().configurationB()),
-                () -> assertFalse(config.configGroup2().configurationC())
+                () -> assertTrue(config.configNamespace1().configurationB()),
+                () -> assertTrue(config.configNamespace1().configurationC()),
+                () -> assertFalse(config.configNamespace2().configurationB()),
+                () -> assertFalse(config.configNamespace2().configurationC())
             );
         }
 
         @Test
         void onCustomOperatorAndMissingCustomChecker_ShouldThrow() {
-            var factory = ConfigFactory.builder(TEST_PATH).build();
+            var factory = ConfigFactory.builder()
+                .withClasspathDir(TEST_PATH)
+                .build();
 
             assertThrows(
                 ConfigurationBuildException.class,
@@ -445,11 +450,11 @@ class DependencyConfigurationTest {
             @ConfigProperty(key = "LogLevel")
             System.Logger.Level logLevel,
 
-            @ConfigGroup
+            @ConfigNamespace
             @DependsOnProperty(name = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
-            ConfigurationGroup configGroup1
+            ConfigurationNamespace configNamespace1
         ) {
-            public record ConfigurationGroup(
+            public record ConfigurationNamespace(
                 @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
                 boolean configurationB
             ) {
@@ -457,8 +462,10 @@ class DependencyConfigurationTest {
         }
 
         @Test
-        void onCustomOperatorAndMissingCustomChecker_GroupVersion_ShouldThrow() {
-            var factory = ConfigFactory.builder(TEST_PATH).build();
+        void onCustomOperatorAndMissingCustomChecker_NamespaceVersion_ShouldThrow() {
+            var factory = ConfigFactory.builder()
+                .withClasspathDir(TEST_PATH)
+                .build();
 
             assertThrows(
                 ConfigurationBuildException.class,

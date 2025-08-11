@@ -13,25 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jvanev.jxconfig.annotation;
+package com.jvanev.jxconfig.modifier.internal;
 
+import com.jvanev.jxconfig.annotation.Modifier;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a constructor parameter as a group of configurations.
+ * This annotation is a container for {@link Modifier} annotations applied to an individual parameter.
  */
-@Target({ElementType.PARAMETER})
+@Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ConfigGroup {
+public @interface Modifiers {
     /**
-     * The namespace this group represents.
-     * <p>
-     * Defaults to an empty string representing the default configuration namespace.
+     * The applied value modifiers with their order of application preserved.
      *
-     * @return The group's namespace.
+     * @return The value modifiers.
      */
-    String namespace() default "";
+    Modifier[] value();
 }

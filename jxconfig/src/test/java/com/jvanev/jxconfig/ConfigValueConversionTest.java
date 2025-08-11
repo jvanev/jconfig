@@ -36,9 +36,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConfigValueConversionTest {
-    private static final String TEST_PATH = "classpath:config";
+    private static final String TEST_PATH = "config";
 
-    private final ConfigFactory factory = ConfigFactory.builder(TEST_PATH).build();
+    private final ConfigFactory factory = ConfigFactory.builder()
+        .withClasspathDir(TEST_PATH)
+        .build();
 
     enum LogLevel {
         DEBUG, INFO
@@ -185,10 +187,11 @@ class ConfigValueConversionTest {
 
         @Test
         void onAddedSupporter_ShouldSupportCustomReferenceType() {
-            var factory = ConfigFactory.builder(TEST_PATH)
-                .withConverter(
+            var factory = ConfigFactory.builder()
+                .withClasspathDir(TEST_PATH)
+                .withValueConverter(
                     DateTimeFormatter.class,
-                    (type, typeArguments, value) -> DateTimeFormatter.ofPattern(value)
+                    (converter, type, typeArguments, value) -> DateTimeFormatter.ofPattern(value)
                 )
                 .build();
 
@@ -199,14 +202,15 @@ class ConfigValueConversionTest {
 
         @Test
         void onAddedSupporter_ShouldContainUsableCustomReferenceType() {
-            var factory = ConfigFactory.builder(TEST_PATH)
-                .withConverter(
+            var factory = ConfigFactory.builder()
+                .withClasspathDir(TEST_PATH)
+                .withValueConverter(
                     DateTimeFormatter.class,
-                    (type, typeArguments, value) -> DateTimeFormatter.ofPattern(value)
+                    (converter, type, typeArguments, value) -> DateTimeFormatter.ofPattern(value)
                 )
-                .withConverter(
+                .withValueConverter(
                     URL.class,
-                    (type, typeArguments, value) -> {
+                    (converter, type, typeArguments, value) -> {
                         try {
                             return URI.create(value).toURL();
                         } catch (MalformedURLException e) {
@@ -227,13 +231,13 @@ class ConfigValueConversionTest {
     class InvalidPropertyTests {
         @Test
         void registeringMultipleConvertersForTheSameType_ShouldThrow() {
-            var factory = ConfigFactory.builder(TEST_PATH + "config");
+            var factory = ConfigFactory.builder();
 
             assertThrows(
                 IllegalArgumentException.class,
                 () -> {
-                    factory.withConverter(DateTimeFormatter.class, (type, argTypes, value) -> value);
-                    factory.withConverter(DateTimeFormatter.class, (type, argTypes, value) -> value);
+                    factory.withValueConverter(DateTimeFormatter.class, (converter, type, argTypes, value) -> value);
+                    factory.withValueConverter(DateTimeFormatter.class, (converter, type, argTypes, value) -> value);
                 }
             );
         }

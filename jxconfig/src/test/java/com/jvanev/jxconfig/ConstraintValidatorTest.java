@@ -29,13 +29,14 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ConstraintValidatorTest {
-    private static final String TEST_PATH = "classpath:config";
+    private static final String TEST_PATH = "config";
 
     private ConfigFactory factory;
 
     @BeforeEach
     void setUp() {
-        factory = ConfigFactory.builder(TEST_PATH)
+        factory = ConfigFactory.builder()
+            .withClasspathDir(TEST_PATH)
             .withConfigurationValidator(new ExternalValidator())
             .build();
     }
@@ -141,7 +142,8 @@ class ConstraintValidatorTest {
 
     @Test
     void registeringMultipleValidators_ShouldThrow() {
-        var builder = ConfigFactory.builder(TEST_PATH)
+        var builder = ConfigFactory.builder()
+            .withClasspathDir(TEST_PATH)
             .withConfigurationValidator(new ExternalValidator());
 
         assertThrows(

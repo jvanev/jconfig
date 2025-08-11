@@ -16,13 +16,16 @@
 package com.jvanev.jxconfig;
 
 import com.jvanev.jxconfig.annotation.ConfigFile;
-import com.jvanev.jxconfig.annotation.ConfigGroup;
+import com.jvanev.jxconfig.annotation.ConfigNamespace;
+import com.jvanev.jxconfig.annotation.Modifier;
 import com.jvanev.jxconfig.converter.ValueConverter;
 import com.jvanev.jxconfig.converter.internal.Converter;
 import com.jvanev.jxconfig.exception.ConfigurationBuildException;
 import com.jvanev.jxconfig.exception.InvalidDeclarationException;
+import com.jvanev.jxconfig.exception.ModifierInstantiationException;
 import com.jvanev.jxconfig.exception.ValueConversionException;
 import com.jvanev.jxconfig.internal.ReflectionUtil;
+import com.jvanev.jxconfig.modifier.ValueModifier;
 import com.jvanev.jxconfig.resolver.DependencyChecker;
 import com.jvanev.jxconfig.resolver.internal.ValueResolver;
 import com.jvanev.jxconfig.validator.ConfigurationValidator;
@@ -34,7 +37,9 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A type-safe configuration factory responsible for producing fully initialized configuration objects.
@@ -46,41 +51,33 @@ import java.util.Properties;
  * default values, and value resolution.
  */
 public final class ConfigFactory {
-    private static final String DEFAULT_DIR = "./";
-
-    private static final String DEFAULT_CLASS_PATH = "";
-
-    private final String classpath;
+    private final String classpathDirectory;
 
     private final Path configurationDirectory;
 
-    private final Converter converter;
+    private final Converter valueConverter;
 
-    /**
-     * The additional dependency checking mechanism. Might be {@code null}, if none has been registered.
-     */
-    private final DependencyChecker checker;
+    private final DependencyChecker dependencyChecker;
 
-    /**
-     * The registered configuration validator. Might be {@code null}, if none has been registered.
-     */
-    private final ConfigurationValidator validator;
+    private final ConfigurationValidator configurationValidator;
+
+    private final Map<Class<?>, ValueModifier> valueModifiers = new ConcurrentHashMap<>();
 
     // Instances of the factory are obtained through the dedicated builder
     private ConfigFactory(
-        String classpath,
+        String classpathDirectory,
         String configurationDirectory,
-        Converter converter,
-        DependencyChecker checker,
-        ConfigurationValidator validator
+        Converter valueConverter,
+        DependencyChecker dependencyChecker,
+        ConfigurationValidator configurationValidator
     ) {
-        this.classpath = classpath.isBlank() ? classpath : classpath.endsWith("/")
-            ? classpath
-            : classpath + "/";
+        this.classpathDirectory = classpathDirectory.isBlank() ? classpathDirectory : classpathDirectory.endsWith("/")
+            ? classpathDirectory
+            : classpathDirectory + "/";
         this.configurationDirectory = Path.of(configurationDirectory);
-        this.converter = converter;
-        this.checker = checker;
-        this.validator = validator;
+        this.valueConverter = valueConverter;
+        this.dependencyChecker = dependencyChecker;
+        this.configurationValidator = configurationValidator;
     }
 
     /**
@@ -98,6 +95,8 @@ public final class ConfigFactory {
      */
     @SuppressWarnings("unchecked")
     public <T> T createConfigContainer(Class<T> type) {
+        Objects.requireNonNull(type, "The configuration container type must not be null");
+
         if (type.getDeclaredConstructors().length != 1) {
             throw new InvalidDeclarationException(
                 "Configuration container " + type.getSimpleName() + " must declare exactly one constructor"
@@ -167,6 +166,8 @@ public final class ConfigFactory {
      * @throws ConfigurationBuildException If an error occurs while creating the configuration type.
      */
     public <T> T createConfig(Class<T> type) {
+        Objects.requireNonNull(type, "The configuration type must not be null");
+
         var configFile = type.getDeclaredAnnotation(ConfigFile.class);
 
         if (configFile == null) {
@@ -190,7 +191,7 @@ public final class ConfigFactory {
     /**
      * Constructs and populates a configuration objects tree based on the specified type and context.
      *
-     * @param type    The type of the configuration object (or group) to be built
+     * @param type    The type of the configuration object (or namespace) to be built
      * @param context The context within which the configuration object will be built
      *
      * @return A fully initialized instance of the specified type.
@@ -210,14 +211,23 @@ public final class ConfigFactory {
         var constructor = type.getDeclaredConstructors()[0];
         var parameters = constructor.getParameters();
         var arguments = new Object[parameters.length];
-        var valueResolver = new ValueResolver(context.properties(), type, context.namespace(), parameters, checker);
+        var valueResolver = new ValueResolver(
+            context.properties(),
+            type,
+            context.namespace(),
+            parameters,
+            dependencyChecker
+        );
         var processedParameters = new HashMap<String, String>();
 
         for (var i = 0; i < parameters.length; i++) {
             var parameter = parameters[i];
 
-            if (ReflectionUtil.isConfigGroup(parameter)) {
-                var newContext = context.fromGroup(parameter, valueResolver.isGroupDependencySatisfied(parameter));
+            if (ReflectionUtil.isConfigNamespace(parameter)) {
+                var newContext = context.fromNamespace(
+                    parameter,
+                    valueResolver.isNamespaceDependencySatisfied(parameter)
+                );
                 arguments[i] = buildConfigurationTree(parameter.getType(), newContext);
             } else {
                 var property = ReflectionUtil.getConfigProperty(type, parameter);
@@ -236,9 +246,10 @@ public final class ConfigFactory {
                 var resolvedValue = context.isDependencySatisfied()
                     ? valueResolver.resolveValue(parameter)
                     : valueResolver.getDefaultValue(parameter);
+                Object convertedValue;
 
                 try {
-                    arguments[i] = converter.convert(parameter.getParameterizedType(), resolvedValue.trim());
+                    convertedValue = valueConverter.convert(parameter.getParameterizedType(), resolvedValue.trim());
                 } catch (Exception e) {
                     throw new ValueConversionException(
                         "Failed to convert the resolved value for configuration property %s (%s.%s)"
@@ -246,17 +257,59 @@ public final class ConfigFactory {
                         e
                     );
                 }
+
+                arguments[i] = modify(type, parameter, convertedValue);
             }
         }
 
         var configurationObject = (T) constructor.newInstance(arguments);
 
         // Use the registered validator, if exists, to validate the product
-        if (validator != null) {
-            validator.validate(configurationObject);
+        if (configurationValidator != null) {
+            configurationValidator.validate(configurationObject);
         }
 
         return configurationObject;
+    }
+
+    /**
+     * Returns the specified value with all modifiers of the specified parameter applied to it.
+     *
+     * @param type      The type declaring the specified parameter
+     * @param parameter The parameter to which the specified value will be passed
+     * @param value     The value to be modified
+     *
+     * @return The specified value after all modifiers the specified parameter is annotated with
+     * have been applied to it.
+     */
+    private Object modify(Class<?> type, Parameter parameter, Object value) {
+        var modifiedValue = value;
+
+        for (var modifier : parameter.getAnnotationsByType(Modifier.class)) {
+            var valueModifier = valueModifiers.computeIfAbsent(
+                modifier.value(), key -> {
+                    try {
+                        return modifier.value().getConstructor().newInstance();
+                    } catch (ReflectiveOperationException e) {
+                        var property = ReflectionUtil.getConfigProperty(type, parameter);
+
+                        throw new ModifierInstantiationException(
+                            "Failed to instantiate modifier %s applied to parameter %s.%s (%s)"
+                                .formatted(
+                                    key.getSimpleName(),
+                                    type.getSimpleName(),
+                                    parameter.getName(),
+                                    property.key()
+                                ),
+                            e
+                        );
+                    }
+                }
+            );
+            modifiedValue = valueModifier.modify(modifiedValue);
+        }
+
+        return modifiedValue;
     }
 
     /**
@@ -271,17 +324,22 @@ public final class ConfigFactory {
         /**
          * Returns a new context based on this context and the specified arguments.
          *
-         * @param parameter                  The parameter annotated with {@link ConfigGroup}
-         * @param isGroupDependencySatisfied Whether the dependency of the new group is satisfied
+         * @param parameter                      The parameter annotated with {@link ConfigNamespace}
+         * @param isNamespaceDependencySatisfied Whether the dependency of the new namespace is satisfied
          *
          * @return A new context built in the context of this context.
          */
-        public BuildContext fromGroup(Parameter parameter, boolean isGroupDependencySatisfied) {
-            var group = ReflectionUtil.getConfigGroup(parameter);
+        BuildContext fromNamespace(Parameter parameter, boolean isNamespaceDependencySatisfied) {
+            var parameterNamespace = ReflectionUtil.getConfigNamespace(parameter);
+
             // The new namespace (if defined) is always one level deeper than the previous
-            var newNamespace = namespace.isBlank() ? group.namespace() : namespace + "." + group.namespace();
-            // Satisfied if, and only if, this group's dependency and the dependencies of all parents are satisfied
-            var isNewContextDependencySatisfied = isDependencySatisfied && isGroupDependencySatisfied;
+            var newNamespace = parameterNamespace.value().isBlank() ? namespace : namespace.isBlank()
+                ? parameterNamespace.value()
+                : namespace + "." + parameterNamespace.value();
+
+            // Satisfied if, and only if, this namespace's dependency
+            // and the dependencies of all upstream context entries are satisfied
+            var isNewContextDependencySatisfied = isDependencySatisfied && isNamespaceDependencySatisfied;
 
             return new BuildContext(properties, newNamespace, isNewContextDependencySatisfied);
         }
@@ -289,11 +347,10 @@ public final class ConfigFactory {
 
     /**
      * Loads and returns a {@link Properties} object populated with the contents of the file with the specified name.
-     * The file is expected to be located within the {@link #classpath} and/or
-     * {@link #configurationDirectory}.
+     * The file is expected to be located in the {@link #classpathDirectory} and/or {@link #configurationDirectory}.
      * <p>
      * If the file exists in both locations, both files will be loaded and their contents will be merged.
-     * The content of the file from the filesystem will override the matching content of the file from the classpath.
+     * The content of the file in the filesystem will override the matching keys in the file on the classpath.
      *
      * @param filename The name of the configuration file, including its extension (e.g., {@code Network.properties}).
      *
@@ -305,7 +362,7 @@ public final class ConfigFactory {
         var properties = new Properties();
         var defaultConfigFound = false;
 
-        var classpathConfig = classpath + filename;
+        var classpathConfig = classpathDirectory + filename;
 
         try (var stream = Thread.currentThread().getContextClassLoader().getResourceAsStream(classpathConfig)) {
             if (stream != null) {
@@ -333,100 +390,55 @@ public final class ConfigFactory {
 
     /**
      * Returns a new builder object responsible for building a new instance of {@link ConfigFactory}.
-     * <p>
-     * The new factory instance will be configured to load files from the default sources:
-     * <ul>
-     *     <li>The root of the application's {@code resources} directory for classpath lookup</li>
-     *     <li>The current working directory (i.e., {@code ./}) for filesystem lookup</li>
-     * </ul>
-     * <p>
-     * To configure the source paths, use {@link #builder(String)} or {@link #builder(String, String)}.
      *
      * @return A new {@link Builder} for constructing a {@link ConfigFactory}.
      */
     public static Builder builder() {
-        return new Builder(DEFAULT_CLASS_PATH, DEFAULT_DIR);
-    }
-
-    /**
-     * Returns a new builder object responsible for building a new instance of {@link ConfigFactory}.
-     * <p>
-     * The new factory instance will be configured to load files from the specified path,
-     * which must include one of the following prefixes, indicating the source type:
-     * <ul>
-     *     <li>
-     *         {@code classpath} - defines a subdirectory in the classpath where the configuration files are located.
-     *         For example: {@code classpath:config}, {@code classpath:someDir/someSubDir/...}, etc.
-     *     </li>
-     *     <li>
-     *         {@code dir} - defines a directory in the local filesystem.
-     *         For example: {@code dir:/var/config}, {@code dir:./dir/config}, etc.
-     *     </li>
-     * </ul>
-     * <p>
-     * Using this method explicitly sets only one of the sources, while leaving the other at its default.
-     * For example, specifying {@code dir:/var/config} will load files from both {@code /var/config} and
-     * the root of the classpath.
-     * <p>
-     * The default classpath is the root of the application's {@code resources} directory.<br />
-     * The default filesystem directory is the current working directory (i.e., {@code ./}).
-     *
-     * @param path The source path for {@code .properties} configuration files
-     *
-     * @return A new {@link Builder} for constructing a {@link ConfigFactory}.
-     */
-    public static Builder builder(String path) {
-        String classpath = DEFAULT_CLASS_PATH;
-        String dir = DEFAULT_DIR;
-
-        if (path.startsWith(Builder.CLASSPATH_PREFIX)) {
-            classpath = path.substring(Builder.CLASSPATH_PREFIX.length());
-        } else if (path.startsWith(Builder.DIR_PREFIX)) {
-            dir = path.substring(Builder.DIR_PREFIX.length());
-        } else {
-            throw new IllegalArgumentException(
-                "Missing or invalid source type prefix. Use " + Builder.CLASSPATH_PREFIX + " or " + Builder.DIR_PREFIX
-            );
-        }
-
-        return new Builder(classpath, dir);
-    }
-
-    /**
-     * Returns a new builder object responsible for building a new instance of {@link ConfigFactory}.
-     * The new factory instance will be configured to load files from the specified paths.
-     *
-     * @param classpath The base path within the classpath, relative to the application's {@code resources} directory
-     * @param dir       The path to the filesystem directory containing configuration files
-     *
-     * @return A new {@link Builder} for constructing a {@link ConfigFactory}.
-     */
-    public static Builder builder(String classpath, String dir) {
-        return new Builder(classpath, dir);
+        return new Builder();
     }
 
     /**
      * This class is responsible for building immutable instances of {@link ConfigFactory}.
      */
     public static class Builder {
-        private static final String CLASSPATH_PREFIX = "classpath:";
+        private String classpathDirectory = "";
 
-        private static final String DIR_PREFIX = "dir:";
+        private String configurationDirectory = "./";
 
-        private final String classpath;
+        private DependencyChecker dependencyChecker;
 
-        private final String configurationDirectory;
+        private ConfigurationValidator configurationValidator;
 
-        private final Map<Class<?>, ValueConverter> converters = new LinkedHashMap<>();
-
-        private ConfigurationValidator validator = null;
-
-        private DependencyChecker dependencyChecker = null;
+        private final Map<Class<?>, ValueConverter> valueConverters = new LinkedHashMap<>();
 
         // Instantiable by the builder method only
-        private Builder(String classpath, String configurationDirectory) {
-            this.classpath = classpath;
-            this.configurationDirectory = configurationDirectory;
+        private Builder() {
+        }
+
+        /**
+         * Specifies the directory on the classpath where the configuration files are located.
+         *
+         * @param directory The configuration files directory on the classpath
+         *
+         * @return This builder.
+         */
+        public Builder withClasspathDir(String directory) {
+            this.classpathDirectory = Objects.requireNonNull(directory, "The classpath directory cannot be null");
+
+            return this;
+        }
+
+        /**
+         * Specifies the directory in the filesystem where the configuration files are located.
+         *
+         * @param directory The configuration files directory in the filesystem
+         *
+         * @return This builder.
+         */
+        public Builder withFilesystemDir(String directory) {
+            this.configurationDirectory = Objects.requireNonNull(directory, "The filesystem directory cannot be null");
+
+            return this;
         }
 
         /**
@@ -440,12 +452,15 @@ public final class ConfigFactory {
          *
          * @return This builder.
          */
-        public Builder withConverter(Class<?> type, ValueConverter converter) {
-            if (converters.containsKey(type)) {
+        public Builder withValueConverter(Class<?> type, ValueConverter converter) {
+            Objects.requireNonNull(type, "The target type cannot be null");
+            Objects.requireNonNull(converter, "The converter cannot be null");
+
+            if (valueConverters.containsKey(type)) {
                 throw new IllegalArgumentException("Duplicate converter found for type " + type.getSimpleName());
             }
 
-            converters.put(type, converter);
+            valueConverters.put(type, converter);
 
             return this;
         }
@@ -459,7 +474,7 @@ public final class ConfigFactory {
          * @return This builder.
          */
         public Builder withDependencyChecker(DependencyChecker dependencyChecker) {
-            this.dependencyChecker = dependencyChecker;
+            this.dependencyChecker = Objects.requireNonNull(dependencyChecker, "The dependency checker cannot be null");
 
             return this;
         }
@@ -473,11 +488,12 @@ public final class ConfigFactory {
          * @return This builder.
          */
         public Builder withConfigurationValidator(ConfigurationValidator validator) {
-            if (this.validator != null) {
-                throw new IllegalArgumentException("A validator is already registered");
+            if (this.configurationValidator != null) {
+                throw new IllegalArgumentException("A configuration validator is already registered");
             }
 
-            this.validator = validator;
+            this.configurationValidator = Objects
+                .requireNonNull(validator, "The configuration validator cannot be null");
 
             return this;
         }
@@ -488,13 +504,15 @@ public final class ConfigFactory {
          * @return The fully initialized {@link ConfigFactory} object.
          */
         public ConfigFactory build() {
-            var converter = new Converter();
+            var valueConverter = new Converter(valueConverters);
 
-            for (var set : converters.entrySet()) {
-                converter.addValueConverter(set.getKey(), set.getValue());
-            }
-
-            return new ConfigFactory(classpath, configurationDirectory, converter, dependencyChecker, validator);
+            return new ConfigFactory(
+                classpathDirectory,
+                configurationDirectory,
+                valueConverter,
+                dependencyChecker,
+                configurationValidator
+            );
         }
     }
 }

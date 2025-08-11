@@ -15,21 +15,26 @@
  */
 package com.jvanev.jxconfig.annotation;
 
+import com.jvanev.jxconfig.modifier.ValueModifier;
+import com.jvanev.jxconfig.modifier.internal.Modifiers;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Maps a class to a configuration file.
+ * Modifies the value that will be passed to the target parameter using the specified modifier.
+ * This annotation can be applied multiple times.
  */
-@Target(ElementType.TYPE)
+@Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ConfigFile {
+@Repeatable(Modifiers.class)
+public @interface Modifier {
     /**
-     * The name of the configuration file, including its extension (e.g., {@code Config.properties}).
+     * The modifier that will be used to modify the value that will be passed to the parameter.
      *
-     * @return The configuration file's name.
+     * @return The value modifier.
      */
-    String filename();
+    Class<? extends ValueModifier> value();
 }

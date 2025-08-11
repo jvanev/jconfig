@@ -5,7 +5,7 @@ value resolution, grouping, namespaces, and a flexible value conversion mechanis
 
 ## Requirements
 
-Requires Java 17 or newer.
+Requires Java 17+.
 
 ## Features
 
@@ -18,19 +18,23 @@ Requires Java 17 or newer.
 - Namespaces - Reuse configuration types for groups of configurations with identical structures
 - Fail-fast loading - Invalid configurations are caught early
 
-## Basics
+## Table of Content
+
+1. [JXConfig Basics](/docs/basics.md)
+2. [Type Conversions](/docs/conversions.md)
+3. [Value Modifiers](/docs/modifiers.md)
+4. [Configuration Namespaces](/docs/namespaces.md)
+5. [Configuration Dependencies](/docs/dependencies.md)
+6. [Configuration Validators](/docs/validators.md)
+
+## Basic Example
 
 The most basic usage of this factory requires two steps:
 
 1. Define your configuration type
 2. Let the `ConfigFactory` instantiate it
 
-> **Note:** All examples are based on the assumption that your configuration files are located
-> at the root of your project's `resources` directory.
-
-### Example
-
-`Database.properties`
+`Database.properties`:
 
 ```properties
 URL = jdbc:mariadb://127.0.0.1:3306/test
@@ -39,7 +43,7 @@ Password = JXConfig_Password
 PoolSize = 7
 ```
 
-`DatabaseConfig.java`
+`DatabaseConfig.java`:
 
 ```java
 @ConfigFile(filename = "Database.properties")
@@ -54,7 +58,7 @@ public record DatabaseConfig(
 ) {}
 ```
 
-`Main.java`
+`Main.java`:
 
 ```java
 public static void main(String[] args) {
@@ -62,531 +66,20 @@ public static void main(String[] args) {
     var dbConfig = factory.createConfig(DatabaseConfig.class);
 
     System.out.println(dbConfig);
-
-    // Output:
-    // DatabaseConfig[
-    //     url=jdbc:mariadb://127.0.0.1:3306/test,
-    //     user=JXConfig,
-    //     password=JXConfig_Password,
-    //     poolSize=7,
-    //     nonExistent=false
-    // ]
 }
 ```
 
-> **Note:** If a configuration property is not found in the properties file and no explicit defaultValue
-> is set within its `@ConfigProperty` annotation, JXConfig will attempt to convert an empty string ("")
-> for that property. If the conversion mechanism can successfully produce a valid value from an empty string
-> (e.g., an empty list for a `List<T>` type, or an empty map for a `Map<K, V>` type), then you are not required
-> to provide an explicit `defaultValue`. However, if an empty string cannot be converted to the required type
-> (as is the case for `boolean` or `int`), an exception will be thrown, highlighting the need for an explicit
-> `defaultValue` like for `NonExistent` in the example above.
+**Output:**
 
-## Value Conversion
-
-The configuration factory provides support for converting `String` values to several
-common types by default:
-
-- **Primitive types** - `byte`, `short`, `int`, `long`, `float`, `double`, `boolean`, `char`
-- **Primitive arrays** - `byte[]`, `short[]`, `int[]`, `long[]`, `float[]`, `double[]`, `boolean[]`, `char[]`
-- **Enumerations** - Any `Enum` type, by matching the string value to an enum entry's name.
-- **Reference Types with `valueOf(String)`:** Any class that provides a public, static `valueOf(String)` method.
-  The return type of this method must be assignable to the target type.
-- **Collections:** `List` and `Set`. Elements within the collection are also converted recursively based on
-  their generic type argument (e.g., `List<Integer>` will convert string "1,2,3" into a list of integers).
-- **Maps:** For `Map<K, V>`, both keys and values are converted recursively based on their generic type arguments
-  (e.g., `Map<String, Integer>` will convert "key1=1,key2=2" into a map with string keys and integer values).
-
-When the type of the configuration property is:
-
-- `List` - An `ArrayList` will be used for its initialization
-- `Set` - A `LinkedHashSet` will be used for its initialization
-- `Map` - A `LinkedHashMap` will be used for its initialization
-
-### Custom Converters
-
-Although the library cannot cover every possible type, it provides a flexible mechanism for adding new type converters
-and overriding existing ones.
-
-#### Example
-
-We will use `DateTimeFormatter` as an example of how to add support for an unsupported property type.
-
-`System.properties`
-
-```properties
-LogTimestampFormat = yyyy-MM-dd HH:mm:ss.SSS
 ```
-
-`SystemConfig.java`
-
-```java
-@ConfigFile(filename = "System.properties")
-public record SystemConfig(
-    @ConfigProperty(key = "LogTimestampFormat")
-    DateTimeFormatter logTimestampFormatter
-) {}
+DatabaseConfig[
+    url=jdbc:mariadb://127.0.0.1:3306/test,
+    user=JXConfig,
+    password=JXConfig_Password,
+    poolSize=7,
+    nonExistent=false
+]
 ```
-
-`Main.java`
-
-```java
-public static void main(String[] args) {
-    var factory = ConfigFactory.builder()
-        .withConverter(
-            DateTimeFormatter.class,
-            (type, typeArgs, value) -> DateTimeFormatter.ofPattern(value)
-        )
-        .build();
-    var systemConfig = factory.createConfig(SystemConfig.class);
-
-    System.out.println(LocalDateTime.parse("2025-08-03T10:15:30").format(systemConfig.logTimestampFormatter()));
-
-    // Output: 2025-08-03 10:15:30.000
-}
-```
-
-#### Custom Converters and Overriding Behavior
-
-Registering a custom converter using `withConverter` has an important side effect - Custom value
-converters take precedence over the default conversion mechanism for direct target matches.
-While adding support for additional types doesn't change the default behavior, adding a custom
-converter for an already supported type effectively overrides the default conversion mechanism for this type.
-
-If no converter matches the target type directly, the custom converters will be checked in insertion order;
-the first one that can produce an assignable value will be used.
-
-#### Example
-
-`System.properties`
-
-```properties
-RetryDelay = 5
-```
-
-`SystemConfig.java`
-
-```java
-@ConfigFile(filename = "System.properties")
-public record SystemConfig(
-    @ConfigProperty(key = "RetryDelay") long retryDelay
-) {}
-```
-
-`Main.java`
-
-```java
-public static void main(String[] args) {
-    var factory = ConfigFactory.builder()
-        .withConverter(
-            long.class,
-            (type, typeArgs, value) -> Long.parseLong(value) * 1000
-        )
-        .build();
-    var systemConfig = factory.createConfig(SystemConfig.class);
-
-    System.out.println(systemConfig.retryDelay());
-
-    // Output: 5000
-}
-```
-
-## Configuration Dependencies
-
-It's not uncommon for a configuration value to depend on another configuration value. For example,
-the `LogLevel` should be set to `DEBUG` only in developer mode, or fall back to `INFO` otherwise. Usually,
-such setup involves `if` statements determining the value at runtime.
-
-JXConfig offers another approach - Configuration Dependencies. Declaratively describe the relationships between
-dependent properties, and JXConfig will resolve the final runtime values for you.
-
-If the value of the dependency matches the required value, the dependent property will be initialized with the
-value from the configuration file.
-If the values don't match, the property will be initialized using either `ConfigProperty.defaultKey`,
-or `ConfigProperty.defaultValue` - only one of these members should be defined.
-
-`ConfigProperty.defaultKey` refers to a key in the `.properties` file, while `ConfigProperty.defaultValue`
-is a hardcoded value in your configuration type.
-
-### Example
-
-`Developer.properties`
-
-```properties
-DeveloperMode = false
-LogLevel = DEBUG
-```
-
-`DeveloperConfig.java`
-
-```java
-@ConfigFile(filename = "Developer.properties")
-public record DeveloperConfig(
-    @ConfigProperty(key = "DeveloperMode") boolean developerMode,
-
-    @ConfigProperty(key = "LogLevel", defaultValue = "INFO")
-    @DependsOnProperty(name = "DeveloperMode", value = "true")
-    System.Logger.Level logLevel
-) {}
-```
-
-`Main.java`
-
-```java
-public static void main(String[] args) {
-    var factory = ConfigFactory.builder().build();
-    var developerConfig = factory.createConfig(DeveloperConfig.class);
-
-    System.out.println(developerConfig);
-
-    // Output:
-    // DeveloperConfig[
-    //     developerMode=false,
-    //     logLevel=INFO
-    // ]
-}
-```
-
-> **DependsOnKey:** If `DeveloperConfig.developerMode` is not used anywhere else in your project, you can safely
-> remove it and use `@DependsOnKey(name = "DeveloperMode")` instead. In this case, `DeveloperMode`'s value will be read
-> from the configuration file without the need for an intermediate parameter declaration.
-
-> **Note:** By default, the `value` parameter of `@DependsOnProperty` is set to `true`, emulating a boolean-style comparison,
-> so technically the declaration of `@DependsOnProperty.value` in the example above is redundant.
-
-> **Note 2:** The dependent value is compared to the dependency's resolved value, which means if the dependency has a
-> dependency of its own, that relationship will be checked first to determine
-> the final runtime value for the dependency.
-
-### Custom Dependency Condition Check
-
-By default, a **case-sensitive string comparison** is performed to determine whether
-the resolved value of the dependency matches the required value specified in `@DependsOnProperty.value`.
-
-If this doesn't meet your needs, you can provide a custom comparison strategy via a `DependencyChecker`.
-`DependsOnProperty.operator` should be used to specify operators supported by the custom checker.
-
-#### Example
-
-`Example.properties`
-
-```properties
-SomeNumber = 127
-LogLevel = TRACE
-
-ConfigurationA = true
-ConfigurationB = true
-ConfigurationC = true
-ConfigurationD = true
-```
-
-`Main.java`
-
-```java
-public class Main {
-    private static class CustomChecker implements DependencyChecker {
-        @Override
-        public boolean check(String dependencyValue, String operator, String requiredValue) {
-            return switch (operator) {
-                case ">" -> Integer.parseInt(dependencyValue) > Integer.parseInt(requiredValue);
-                case "|" -> {
-                    for (var entry : requiredValue.split("\\|")) {
-                        if (dependencyValue.equals(entry)) {
-                            yield true;
-                        }
-                    }
-
-                    yield false;
-                }
-                default -> false;
-            };
-        }
-    }
-
-    @ConfigFile(filename = "Example.properties")
-    public record ExampleConfiguration(
-        @ConfigProperty(key = "SomeNumber")
-        int integerA,
-
-        @ConfigProperty(key = "LogLevel")
-        System.Logger.Level logLevel,
-
-        @ConfigProperty(key = "ConfigurationA", defaultValue = "false")
-        @DependsOnProperty(name = "SomeNumber", operator = ">", value = "126")
-        boolean configurationA,
-
-        @ConfigProperty(key = "ConfigurationB", defaultValue = "false")
-        @DependsOnProperty(name = "SomeNumber", operator = ">", value = "127")
-        boolean configurationB,
-
-        @ConfigProperty(key = "ConfigurationC", defaultValue = "false")
-        @DependsOnProperty(name = "LogLevel", operator = "|", value = "DEBUG|TRACE|INFO")
-        boolean configurationC,
-
-        @ConfigProperty(key = "ConfigurationD", defaultValue = "false")
-        @DependsOnProperty(name = "LogLevel", operator = "|", value = "INFO|WARN|ERROR")
-        boolean configurationD
-    ) {}
-
-    public static void main(String[] args) {
-        var factory = ConfigFactory.builder()
-            .withDependencyChecker(new CustomChecker())
-            .build();
-        var config = factory.createConfig(ExampleConfiguration.class);
-
-        System.out.println(config);
-
-        // Output:
-        // ExampleConfiguration[
-        //     integerA=127,
-        //     logLevel=TRACE,
-        //     configurationA=true,
-        //     configurationB=false,
-        //     configurationC=true,
-        //     configurationD=false
-        // ]
-    }
-}
-```
-
-> **Note:** Your custom checker will be invoked for every configuration property that declares
-> a dependency with a non-default `@DependsOnProperty.operator`.
-> Ensure the checker is performant if you expect a high number of dependencies relying on it.
-
-## Configuration Groups
-
-When multiple configuration values depend on a single configuration value, we can define a configuration group
-that switches them all to their default values if the dependency's value doesn't match the requirement.
-Back to the developer mode example, it usually does more than just switching the log level (e.g., turns on additional
-features useful for debugging).
-
-### Example
-
-`Developer.properties`
-
-```properties
-DeveloperMode = false
-LogLevel = DEBUG
-ShowDebugOverlay = true
-BypassLogin = true
-RateLimit = 0
-```
-
-`DeveloperConfig.java`
-
-```java
-@ConfigFile(filename = "Developer.properties")
-public record DeveloperConfig(
-    @ConfigProperty(key = "DeveloperMode") boolean developerMode,
-
-    @ConfigGroup
-    @DependsOnProperty(name = "DeveloperMode")
-    DependentConfig dependentConfig
-) {
-    public record DependentConfig(
-        @ConfigProperty(key = "LogLevel", defaultValue = "INFO")
-        System.Logger.Level logLevel,
-
-        @ConfigProperty(key = "ShowDebugOverlay", defaultValue = "false")
-        boolean debugOverlay,
-
-        @ConfigProperty(key = "BypassLogin", defaultValue = "false")
-        boolean bypassLogin,
-
-        @ConfigProperty(key = "RateLimit", defaultValue = "127")
-        int rateLimit
-  ) {}
-}
-```
-
-`Main.java`
-
-```java
-public static void main(String[] args) {
-    var factory = ConfigFactory.builder().build();
-    var developerConfig = factory.createConfig(DeveloperConfig.class);
-
-    System.out.println(developerConfig);
-
-    // Output:
-    // DeveloperConfig[
-    //     developerMode=false,
-    //     dependentConfig=DependentConfig[
-    //         logLevel=INFO,
-    //         debugOverlay=false,
-    //         bypassLogin=false,
-    //         rateLimit=127
-    //     ]
-    // ]
-}
-```
-
-## Configuration Namespaces
-
-It's not uncommon for different configurations to have a common structure. For example, plugins,
-services, features, etc. Using JXConfig, such configurations can be represented by a single
-configuration type we call a *Namespace*. A namespace is simply a `@ConfigGroup` with a specified name.
-
-### Example
-
-`Network.properties`
-
-```properties
-LoginServer.Host = 127.0.0.1
-LoginServer.Port = 4460
-LoginServer.AcceptorThreads = 1
-LoginServer.WorkerThreads = 0
-LoginServer.WaterMarkLow = 32
-LoginServer.WaterMarkHigh = 64
-
-GameServer.Host = 192.168.0.1
-GameServer.Port = 6543
-GameServer.AcceptorThreads = 1
-GameServer.WorkerThreads = 0
-GameServer.WaterMarkLow = 64
-GameServer.WaterMarkHigh = 128
-```
-
-`NetworkConfig.java`
-
-```java
-@ConfigFile(filename = "Network.properties")
-public record NetworkConfig(
-    @ConfigGroup(namespace = "LoginServer") ServerConfig login,
-    @ConfigGroup(namespace = "GameServer") ServerConfig game
-) {
-    public record ServerConfig(
-        @ConfigProperty(key = "Host") String host,
-        @ConfigProperty(key = "Port") int port,
-        @ConfigProperty(key = "AcceptorThreads") int acceptorThreads,
-        @ConfigProperty(key = "WorkerThreads") int workerThreads,
-        @ConfigProperty(key = "WaterMarkLow") int watermarkLow,
-        @ConfigProperty(key = "WaterMarkHigh") int watermarkHigh
-    ) {}
-}
-```
-
-`Main.java`
-
-```java
-public static void main(String[] args) {
-    var factory = ConfigFactory.builder().build();
-    var networkConfig = factory.createConfig(NetworkConfig.class);
-
-    System.out.println(networkConfig);
-
-    // Output:
-    // NetworkConfig[
-    //     login=ServerConfig[
-    //         host=127.0.0.1,
-    //         port=4460,
-    //         acceptorThreads=1,
-    //         workerThreads=0,
-    //         watermarkLow=32,
-    //         watermarkHigh=64
-    //     ],
-    //     game=ServerConfig[
-    //         host=192.168.0.1,
-    //         port=6543,
-    //         acceptorThreads=1,
-    //         workerThreads=0,
-    //         watermarkLow=64,
-    //         watermarkHigh=128
-    //     ]
-    // ]
-}
-```
-
-> **Note:** The namespaces can also define `@DependsOnProperty` or `@DependsOnKey`,
-> and the same rules as for unnamed groups will apply.
-
-> **Note 2:** The namespaces can be as deeply nested as needed, the `@ConfigGroup.namespace` corresponds to
-> a single level of nesting (i.e., `@ConfigGroup("Database")` refers to the second level in the namespace
-> `LoginServer.Database.URL`)
-
-## Configuration Containers
-
-Last but not least, calling `ConfigFactory.createConfig` for every configuration type might become cumbersome
-when there are many configuration types. In this case, we can define a *configuration container* that provides
-access to all configurations.
-
-We will use a configuration container, which doesn't need any annotations for its definition, to group all previously
-defined configuration types in a single POJO. The only difference when using a configuration container is the method
-we use to create its instance - `ConfigFactory.createConfigContainer`.
-
-### Example
-
-`ConfigContainer.java`
-
-```java
-public record ConfigContainer(
-    DatabaseConfig database,
-    NetworkConfig network,
-    SystemConfig system,
-    DeveloperConfig developer
-) {}
-```
-
-`Main.java`
-
-```java
-public static void main(String[] args) {
-    var factory = ConfigFactory.builder()
-        .withConverter(
-            DateTimeFormatter.class,
-            (type, typeArgs, value) -> DateTimeFormatter.ofPattern(value)
-        )
-        .build();
-    var config = factory.createConfigContainer(ConfigContainer.class);
-
-    System.out.println(config);
-
-    // Output:
-    // ConfigContainer[
-    //     database=DatabaseConfig[
-    //         url=jdbc:mariadb://127.0.0.1:3306/test,
-    //         user=JXConfig,
-    //         password=JXConfig_Password,
-    //         poolSize=7,
-    //         nonExistent=false
-    //     ],
-    //     network=NetworkConfig[
-    //         login=ServerConfig[
-    //             host=127.0.0.1,
-    //             port=4460,
-    //             acceptorThreads=1,
-    //             workerThreads=0,
-    //             watermarkLow=32,
-    //             watermarkHigh=64
-    //         ],
-    //         game=ServerConfig[
-    //             host=192.168.0.1,
-    //             port=6543,
-    //             acceptorThreads=1,
-    //             workerThreads=0,
-    //             watermarkLow=64,
-    //             watermarkHigh=128
-    //         ]
-    //     ],
-    //     system=SystemConfig[
-    //         logTimestampFormatter=...,
-    //         retryDelay=5
-    //     ],
-    //     developer=DeveloperConfig[
-    //         developerMode=false,
-    //         dependentConfig=DependentConfig[
-    //             logLevel=INFO,
-    //             debugOverlay=false,
-    //             bypassLogin=false,
-    //             rateLimit=127
-    //         ]
-    //     ]
-    // ]
-}
-```
-
-> **Note:** Instantiation of the configuration types is exactly the same as if they were instantiated one by one using
-> `ConfigFactory.createConfig`.
 
 ## License
 

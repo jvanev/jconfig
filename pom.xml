@@ -6,9 +6,9 @@
 
     <packaging>pom</packaging>
 
-    <groupId>com.jvanev</groupId>
+    <groupId>com.jvanev.jxconfig</groupId>
     <artifactId>jxconfig-parent</artifactId>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
 
     <modules>
         <module>jxconfig</module>
@@ -48,9 +48,9 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>com.jvanev</groupId>
-                <artifactId>jxconfig-parent</artifactId>
-                <version>${project.version}</version>
+                <groupId>com.jvanev.jxconfig</groupId>
+                <artifactId>jxconfig</artifactId>
+                <version>0.2.0</version>
             </dependency>
             <dependency>
                 <groupId>org.junit</groupId>

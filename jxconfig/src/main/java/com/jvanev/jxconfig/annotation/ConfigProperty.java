@@ -23,7 +23,7 @@ import java.lang.annotation.Target;
 /**
  * Maps a constructor parameter to a key in a configuration file.
  */
-@Target({ElementType.PARAMETER})
+@Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ConfigProperty {
     /**

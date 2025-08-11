@@ -21,6 +21,7 @@ import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -45,7 +46,7 @@ class ValueConverterTest {
 
     @BeforeEach
     void setUp() {
-        converter = new Converter();
+        converter = new Converter(Collections.emptyMap());
     }
 
     static Stream<Arguments> primitivesAndBoxedPrimitivesProvider() {
@@ -225,9 +226,10 @@ class ValueConverterTest {
     class CustomTypeConversionTests {
         @Test
         void shouldUseCustomConvertorWithAssignableReturnValue_IfNoDirectTypeMatchFound() {
-            converter.addValueConverter(
-                Temporal.class,
-                (type, typeArguments, value) -> LocalDateTime.parse(value)
+            var converter = new Converter(
+                Map.of(
+                    Temporal.class, (conv, type, typeArguments, value) -> LocalDateTime.parse(value)
+                )
             );
 
             var value = "2025-07-31T17:55:12";
@@ -237,20 +239,20 @@ class ValueConverterTest {
 
         @Test
         void shouldSupportCustomGenericTypes() throws NoSuchFieldException {
-            converter.
-                addValueConverter(
-                    Stack.class,
-                    (type, typeArguments, value) -> {
+            var converter = new Converter(
+                Map.of(
+                    Stack.class, (conv, type, typeArguments, value) -> {
                         var array = value.split("\\s*,\\s*");
                         var stack = new Stack<>();
 
                         for (var item : array) {
-                            stack.push(converter.convert(typeArguments[0], item));
+                            stack.push(conv.convert(typeArguments[0], item));
                         }
 
                         return stack;
                     }
-                );
+                )
+            );
 
             var entries = "1, 2, 3, 4";
             var type = ExampleType.class.getDeclaredField("stack").getGenericType();
@@ -336,9 +338,10 @@ class ValueConverterTest {
         void shouldThrowOnUnsupportedTypeWithNonStaticValueOfMethod() {
             // Also register an unrelated converter that doesn't support NonStaticValueOfContainer
             // for test coverage purposes
-            converter.addValueConverter(
-                DateTimeFormatter.class,
-                (type, argTypes, value) -> DateTimeFormatter.ofPattern(value)
+            var converter = new Converter(
+                Map.of(
+                    DateTimeFormatter.class, (conv, type, argTypes, value) -> DateTimeFormatter.ofPattern(value)
+                )
             );
 
             assertThrows(

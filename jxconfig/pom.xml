@@ -5,9 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.jvanev</groupId>
+        <groupId>com.jvanev.jxconfig</groupId>
         <artifactId>jxconfig-parent</artifactId>
-        <version>0.2.0</version>
+        <version>0.3.0</version>
     </parent>
 
     <artifactId>jxconfig</artifactId>

@@ -21,15 +21,17 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Maps a class to a configuration file.
+ * Marks a constructor parameter as a namespace.
  */
-@Target(ElementType.TYPE)
+@Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ConfigFile {
+public @interface ConfigNamespace {
     /**
-     * The name of the configuration file, including its extension (e.g., {@code Config.properties}).
+     * The name of this namespace.
+     * <p>
+     * Defaults to an empty string representing the default configuration namespace.
      *
-     * @return The configuration file's name.
+     * @return The namespace's name.
      */
-    String filename();
+    String value() default "";
 }
