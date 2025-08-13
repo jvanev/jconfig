@@ -32,9 +32,9 @@ representation of a configuration file, allowing you to work with configuration 
 For a declaration to be a valid *configuration type*, two conditions must be met:
 
 1. It must define **exactly one** constructor
-2. **Every constructor parameter** must be annotated with either `@ConfigProperty` or `@ConfigGroup` (but not both)
+2. **Every constructor parameter** must be annotated with either `@ConfigProperty` or `@ConfigNamespace` (but not both)
 
-> **Note:** `ConfigGroup` is a more advanced feature and is not covered on this page.
+> **Note:** `ConfigNamespace` is a more advanced feature and is not covered on this page.
 
 ### Declaring a Configuration Type
 
