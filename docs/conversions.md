@@ -14,9 +14,9 @@ The following is a list of built-in conversions:
 - **Reference Types with `valueOf(String)`:** Any class that provides a public, static `valueOf(String)` method
   The return type of this method must be assignable to the target type
 - **Collections:** `List` and `Set`. Elements within the collection are also converted recursively based on
-  their generic type argument (e.g., `List<Integer>` will convert string "1,2,3" into a list of integers)
+  their generic type argument (e.g., `List<Integer>` will convert string "1, 2, 3" into a list of integers)
 - **Maps:** For `Map<K, V>`, both keys and values are converted recursively based on their generic type arguments
-  (e.g., `Map<String, Integer>` will convert "key1=1,key2=2" into a map of string keys and integer values)
+  (e.g., `Map<String, Integer>` will convert "key1: 1, key2: 2" into a map of string keys and integer values)
 
 When the type of the configuration parameter is:
 
